@@ -1,0 +1,7 @@
+strategy,release_date,version,notes
+B1_US_INTRADAY,2025-03-03,v5.1,Retrained gap model; stronger opening-gap fade
+A2_CN_STATARB,2025-05-12,v2.3,Added small-cap feature set
+D1_US_CROWDING,2025-06-02,v2.0,New feature family (realised-vol features)
+A1_US_STATARB,2025-09-15,v3.2,Retrain on extended window; more weight on short-horizon features
+E1_CRYPTO_CARRY,2025-12-01,v1.6,Momentum overlay re-weighted
+C1_US_EVENT,2026-01-12,v1.4,Beta-neutralisation constraint added after risk review

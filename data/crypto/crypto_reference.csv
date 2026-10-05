@@ -1,0 +1,41 @@
+symbol,sector,primary_venue
+BTC,Store of Value,VENUE_A
+ETH,Smart Contract L1,VENUE_A
+SOL,Smart Contract L1,VENUE_A
+BNB,Exchange Token,VENUE_A
+XRP,Infrastructure,VENUE_A
+ADA,Smart Contract L1,VENUE_A
+AVAX,Smart Contract L1,VENUE_A
+DOT,Infrastructure,VENUE_A
+LINK,Infrastructure,VENUE_A
+UNI,DeFi,VENUE_A
+AAVE,DeFi,VENUE_A
+MKR,DeFi,VENUE_B
+LDO,DeFi,VENUE_B
+ARB,Infrastructure,VENUE_A
+OP,Infrastructure,VENUE_A
+ATOM,Infrastructure,VENUE_A
+NEAR,Smart Contract L1,VENUE_A
+FIL,Infrastructure,VENUE_B
+DOGE,Meme,VENUE_A
+SHIB,Meme,VENUE_A
+PEPE,Meme,VENUE_A
+OKB,Exchange Token,VENUE_A
+CRV,DeFi,VENUE_A
+INJ,DeFi,VENUE_B
+TRX,Smart Contract L1,VENUE_B
+LTC,Store of Value,VENUE_B
+BCH,Store of Value,VENUE_B
+ETC,Smart Contract L1,VENUE_B
+XLM,Infrastructure,VENUE_B
+HBAR,Infrastructure,VENUE_A
+APT,Smart Contract L1,VENUE_B
+SUI,Smart Contract L1,VENUE_A
+SEI,Smart Contract L1,VENUE_B
+TIA,Infrastructure,VENUE_A
+RUNE,DeFi,VENUE_B
+GRT,Infrastructure,VENUE_A
+SNX,DeFi,VENUE_A
+CRO,Exchange Token,VENUE_A
+WIF,Meme,VENUE_A
+BONK,Meme,VENUE_A

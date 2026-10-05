@@ -1,0 +1,7 @@
+strategy,team,market,asset_class,description,target_gmv_usd,holding_period
+A1_US_STATARB,TEAM_ALPHA,US,equity,ML stat-arb on US equities (gradient boosted trees on price/volume features),60000000.0,1-2 days
+A2_CN_STATARB,TEAM_ALPHA,CN,equity,ML stat-arb on China A-shares via Stock Connect,25000000.0,1-2 days
+B1_US_INTRADAY,TEAM_BRAVO,US,equity,Intraday ML on opening auction imbalance / gap dynamics,40000000.0,hours
+C1_US_EVENT,TEAM_CHARLIE,US,equity,Post-earnings announcement drift with NLP on transcripts,30000000.0,3-5 days
+D1_US_CROWDING,TEAM_DELTA,US,equity,"Positioning / crowding model (short interest, borrow, flows)",50000000.0,3-7 days
+E1_CRYPTO_CARRY,TEAM_ECHO,CRYPTO,crypto,Perpetual-futures funding carry with momentum overlay,20000000.0,2-4 days
