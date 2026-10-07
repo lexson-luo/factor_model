@@ -287,7 +287,7 @@ class EquityExposureBuilder:
         K = len(factors)
         X = np.full((T, N, K), np.nan)
         Xs = np.full((T, N, len(SLOW_FACTORS)), np.nan)
-        cands = [f for f in CANDIDATE_FACTORS if f in d]
+        cands = [f for f in CANDIDATE_FACTORS if f in d and f not in promoted]   # promoted ones are core now
         Xc = {f: np.full((T, N), np.nan) for f in cands}
         Xm = {f: np.full((T, N), np.nan) for f in ("hf_ownership_13f",) if f in d}
         sec_idx = np.array([p.spec.sectors.index(s) for s in p.ref.sector])
@@ -329,6 +329,8 @@ class EquityExposureBuilder:
                 Xt[:, fi[f]] = st(f)
             # orthogonalise in the fixed, documented order, then re-standardise
             for f, on in ORTHOGONALISATION.items():
+                if f not in fi:
+                    continue
                 Xt[:, fi[f]] = orthogonalize(Xt[:, fi[f]], Xt[:, [fi[o] for o in on]], e, wt)
                 Xt[:, fi[f]] = standardize(Xt[:, fi[f]], e, cw, c)
             if p.spec.short_side_crowding:

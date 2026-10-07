@@ -141,6 +141,26 @@ def test_crowding_is_cleaned_of_size_volatility_liquidity(us_model):
 
 
 @needs_data_module
+def test_promoted_candidates_are_core_styles_cleaned_of_size(us_model):
+    from factor_framework.config import PROMOTED_CANDIDATES
+    _, fm = us_model
+    e = fm.expo
+    t = len(e.dates) - 1
+    m = e.estu.values[t]
+    size = e.X[t, m, e.factors.index("size")]
+    w = e.reg_weight.values[t][m]
+
+    def wcorr(a, b):            # orthogonality holds under the regression weights (equal-weighted it need not:
+        a, b = a - np.average(a, weights=w), b - np.average(b, weights=w)   # the link to size is non-linear)
+        return np.average(a * b, weights=w) / np.sqrt(np.average(a * a, weights=w) * np.average(b * b, weights=w))
+
+    for f in PROMOTED_CANDIDATES:
+        assert e.groups[f] == "style" and f not in e.candidates
+        assert f in fm.factor_returns.columns
+        assert abs(wcorr(e.X[t, m, e.factors.index(f)], size)) < 0.01
+
+
+@needs_data_module
 def test_dimson_betas_correct_epps_bias(us_model):
     from factor_framework.data_loader import load_bars, load_futures_bars
     from factor_framework.intraday import IntradayModel
@@ -149,3 +169,56 @@ def test_dimson_betas_correct_epps_bias(us_model):
     _, _, _, betas = im.estimate()
     b = betas.dropna()
     assert b.dimson_30m.mean() > b.concurrent_30m.mean() + 0.1
+
+
+def test_surrogate_shap_is_additive_and_flags_unmapped_driver():
+    from factor_framework.diagnostics import fit_surrogate
+    rng = np.random.default_rng(0)
+    T, N = 40, 300
+    df = pd.DataFrame({"t": np.repeat(np.arange(T), N),
+                       "reversal_5d": rng.standard_normal(T * N), "log_mcap": rng.standard_normal(T * N),
+                       "theme_tag": (rng.random(T * N) < 0.2).astype(float),
+                       "sector": rng.integers(0, 5, T * N).astype(float)})
+    w = -df.reversal_5d + 1.5 * df.theme_tag * (df.reversal_5d < 0) + 0.1 * rng.standard_normal(T * N)
+    df["weight"] = w / w.abs().sum() * T
+    r = fit_surrogate(df, n_shap=2000, n_interact=300)
+    assert r["reliable"] and r["r2_oos"] > 0.8
+    assert r["importance"].feature.iloc[0] == "reversal_5d"
+    assert r["candidate_factors"] == ["theme_tag"]
+    assert r["interactions"].iloc[0][["a", "b"]].tolist() == ["reversal_5d", "theme_tag"]
+    sv = r["shap_values"]
+    feats = [c[5:] for c in sv.columns if c.startswith("shap_")]
+    x = sv[[f"x_{f}" for f in feats]].set_axis(feats, axis=1)
+    pred = r["model"].predict(x) * r["y_scale"]
+    np.testing.assert_allclose(r["base_value"] + sv[[f"shap_{f}" for f in feats]].sum(axis=1), pred, atol=1e-6)
+    assert set(r["fit"].target) == {"weight", "rank", "held_only"}   # no unheld names -> no 'held' AUC row
+
+
+def test_two_sided_shap_attribution_is_exact_and_recovers_factor_pnl():
+    from factor_framework.diagnostics import _by_group, fit_return_surrogate, two_sided_pnl
+    rng = np.random.default_rng(1)
+    T, N = 60, 400
+    t, i = np.repeat(np.arange(T), N), np.tile(np.arange(N), T)
+    x, z = rng.standard_normal(T * N), rng.standard_normal(T * N)
+    f = rng.normal(0, 0.01, T)                                  # daily return of the reversal characteristic
+    ret = f[t] * x + 0.01 * rng.standard_normal(T * N)
+    frame = pd.DataFrame({"t": t, "i": i, "reversal_5d": x, "log_mcap": z,
+                          "sector": rng.integers(0, 3, T * N).astype(float), "ret": ret})
+    rs = fit_return_surrogate(frame, n_jobs=1)
+    F, cols = rs.frame, [f"shap_{c}" for c in rs.feats]
+    np.testing.assert_allclose(F.base + F[cols].sum(axis=1) + F.resid, F.ret, atol=1e-12)
+
+    h = rng.standard_normal(T * N) * 1e4
+    gmv = pd.Series(np.abs(h)).groupby(t).transform("sum").values
+    w = h / gmv
+    a = _by_group(np.c_[0.6 * w, 0.4 * w], ["reversal_5d", "log_mcap"], np.zeros(T * N), np.zeros(T * N))
+    b = _by_group(F[cols].values, rs.feats, F.base.values, F.resid.values)
+    M, ret_side, w_side = two_sided_pnl(t, gmv, a, b)
+    pnl = pd.Series(h * ret).groupby(t).sum()
+    np.testing.assert_allclose(ret_side.sum(axis=1), pnl, rtol=1e-9)
+    np.testing.assert_allclose(w_side.sum(axis=1), pnl, rtol=1e-9)
+    assert np.isclose(M.values.sum(), pnl.sum())
+    np.testing.assert_allclose(w_side.st_reversal, 0.6 * pnl, rtol=1e-9)
+    true = pd.Series(h * f[t] * x).groupby(t).sum()
+    assert np.corrcoef(ret_side.st_reversal, true)[0, 1] > 0.8
+    assert ret_side["size"].abs().sum() < 0.3 * ret_side.st_reversal.abs().sum()

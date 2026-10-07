@@ -137,6 +137,14 @@ def run(data_dir: Path = DATA_DIR, out_dir: Path = OUTPUT_DIR, write_reports: bo
     for s, b in att.books.items():
         if b.market in ("US", "CN") and s != "B1_US_INTRADAY":
             D["surrogate"][s] = dg.surrogate_model(s, b, panels[b.market], models[b.market])
+    # SHAP attribution cross-check: one return surrogate per market, then the two-sided P&L split per strategy
+    D["return_surrogate"], D["shap_attribution"] = {}, {}
+    for m in sorted({att.books[s].market for s in D["surrogate"]}):
+        live = np.flatnonzero(sum(np.abs(b.h.values).sum(axis=1) for b in att.books.values() if b.market == m) > 0)
+        D["return_surrogate"][m] = dg.return_surrogate(m, panels[m], models[m], live)
+    for s, sur in D["surrogate"].items():
+        D["shap_attribution"][s] = dg.shap_attribution(s, att.books[s], sur, D["return_surrogate"][att.books[s].market],
+                                                       att)
     D["overlap"] = dg.strategy_overlap(att)
     n_obs = len(att.by_reporting_day().index.get_level_values(0).unique())
     D["resid_corr_named"] = dg.residual_correlation_test(D["overlap"]["corr_residual_named_only"], n_obs)

@@ -4,4 +4,4 @@ scipy>=1.12
 scikit-learn>=1.5
 matplotlib>=3.8
 pytest>=8.0
-# optional: shap (adds mean |SHAP| to the surrogate diagnostics if installed)
+xgboost>=2.1          # ML surrogate diagnostics (exact TreeSHAP via pred_contribs)

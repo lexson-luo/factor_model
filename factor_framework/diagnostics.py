@@ -4,9 +4,15 @@ The rule: anything found here that matters is turned into an explicit factor
 or interaction term in the linear model.  The ML outputs are *never* used as
 official attribution.
 
-* Surrogate model: gradient boosting mapping position weights to stock
-  characteristics (what is the black box effectively selecting on?), with
-  permutation importance, partial dependence and Friedman's H for interactions.
+* Surrogate model: XGBoost mapping position weights to stock characteristics
+  (what is the black box effectively selecting on?).  Explained with exact
+  TreeSHAP values and SHAP interaction values; permutation importance is kept as
+  a cross-check.  Fit is reported in and out of sample against a linear
+  baseline, and for alternative targets (weight rank, held-or-not, held-only).
+* SHAP attribution (cross-check, never official): a per-date cross-sectional
+  return surrogate (cross-fitted additive XGBoost) plus the weight surrogate give
+  an exact two-sided split of holdings P&L, decision driver x return driver.
+  Its return side is compared bucket by bucket with the linear attribution.
 * Overlap: P&L / residual correlation, hierarchical clustering, position
   overlap, effective number of bets, cross-team exposure stacking.
 * Regime detection: Gaussian mixture on market-state features.
@@ -16,16 +22,22 @@ official attribution.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from scipy import stats
 from scipy.cluster.hierarchy import leaves_list, linkage
 from scipy.spatial.distance import squareform
-from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.inspection import partial_dependence, permutation_importance
+from sklearn.inspection import permutation_importance
+from sklearn.linear_model import Ridge, RidgeCV
+from sklearn.metrics import r2_score, roc_auc_score
 from sklearn.mixture import GaussianMixture
+import xgboost as xgb
 
 from .attribution import AttributionResult
+from .config import PROMOTED_CANDIDATES
 from .data_loader import EquityPanel
 from .estimation import FactorModel
 
@@ -34,96 +46,338 @@ FEATURE_TO_FACTOR = {
     "relative_tick": "liquidity", "log_mcap": "size", "short_interest": "crowding", "borrow_fee": "crowding",
     "utilisation": "crowding", "beta": "beta", "earnings_today": "earnings", "in_play": "in_play",
     "gap_5d": "overnight_gap", "intraday_mom_3d": "st_momentum", "sector": "industry",
-    "etf_ownership": None, "retail_share": None, "theme_tag": None, "shortable": None,
+    "theme_tag": None, "shortable": None,
 }
+# Candidate characteristics map to their factor once promoted (config.PROMOTED_CANDIDATES), else stay unmapped
+CANDIDATE_FEATURES = {"etf_ownership": "etf_ownership", "retail_share": "retail_attention"}
+FEATURE_TO_FACTOR.update({f: c if c in PROMOTED_CANDIDATES else None for f, c in CANDIDATE_FEATURES.items()})
+SURROGATE_MIN_R2_OOS = 0.05   # below this the surrogate does not generalise and its explanations are not acted on
 
 
 # --------------------------------------------------------------------------- #
 # Surrogate model
 # --------------------------------------------------------------------------- #
-def _surrogate_frame(book, panel: EquityPanel, fm: FactorModel, every: int = 5) -> pd.DataFrame:
+FEATURE_SOURCE = {   # surrogate feature -> exposure-builder descriptor (start-of-day, no look-ahead)
+    "reversal_5d": "st_reversal", "volatility_20d": "volatility", "log_turnover": "liq_turnover",
+    "relative_tick": "liq_tick", "log_mcap": "size", "short_interest": "crowd_si_float",
+    "borrow_fee": "crowd_borrow_fee", "utilisation": "crowd_utilisation", "beta": "beta",
+    "earnings_today": "earnings", "in_play": "in_play", "gap_5d": "overnight_gap",
+    "intraday_mom_3d": "st_momentum", "etf_ownership": "etf_ownership", "retail_share": "retail_attention",
+}
+NON_FEATURES = ("weight", "t", "i", "ret")
+
+
+def _feature_frame(panel: EquityPanel, fm: FactorModel, dates) -> pd.DataFrame:
+    """One row per (date index t, estimation-universe stock column i) with the surrogate features."""
     d = fm.expo.descriptors
-    h = book.h
-    gmv = h.abs().sum(axis=1)
-    dates = [t for t in range(len(panel.dates)) if gmv.iloc[t] > 0][::every]
+    feats = {k: d[v].values for k, v in FEATURE_SOURCE.items() if v in d}
     theme = (panel.ref.theme_tag != "").astype(float).values
     sector = pd.Categorical(panel.ref.sector).codes.astype(float)
-    src = {
-        "reversal_5d": "st_reversal", "volatility_20d": "volatility", "log_turnover": "liq_turnover",
-        "relative_tick": "liq_tick", "log_mcap": "size", "short_interest": "crowd_si_float",
-        "borrow_fee": "crowd_borrow_fee", "utilisation": "crowd_utilisation", "beta": "beta",
-        "earnings_today": "earnings", "in_play": "in_play", "gap_5d": "overnight_gap",
-        "intraday_mom_3d": "st_momentum", "etf_ownership": "etf_ownership", "retail_share": "retail_attention",
-    }
-    feats = {k: d[v] for k, v in src.items() if v in d}
+    shortable = panel.ref.shortable.values.astype(float)
+    estu = fm.expo.estu.values
     rows = []
     for t in dates:
-        m = fm.expo.estu.values[t]
-        blk = {k: v.values[t][m] for k, v in feats.items()}
+        m = estu[t]
+        blk = {k: v[t][m] for k, v in feats.items()}
         blk["sector"] = sector[m]
         blk["theme_tag"] = theme[m]
-        blk["shortable"] = panel.ref.shortable.values[m].astype(float)
-        blk["weight"] = h.values[t][m] / gmv.iloc[t]
+        blk["shortable"] = shortable[m]
         blk["t"] = np.full(m.sum(), t)
+        blk["i"] = np.flatnonzero(m)
         rows.append(pd.DataFrame(blk))
     return pd.concat(rows, ignore_index=True)
 
 
-def friedman_h(model, X: pd.DataFrame, a: str, b: str, grid: int = 8) -> float:
-    pa = partial_dependence(model, X, [a], grid_resolution=grid, kind="average")
-    pb = partial_dependence(model, X, [b], grid_resolution=grid, kind="average")
-    pab = partial_dependence(model, X, [a, b], grid_resolution=grid, kind="average")
-    fa = pa["average"][0]; fb = pb["average"][0]; fab = pab["average"][0]
-    fa = fa - fa.mean(); fb = fb - fb.mean(); fab = fab - fab.mean()
-    if fab.shape != (len(fa), len(fb)):
-        return np.nan
-    inter = fab - fa[:, None] - fb[None, :]
-    den = np.sum(fab ** 2)
-    return float(np.sqrt(np.sum(inter ** 2) / den)) if den > 0 else np.nan
+def _surrogate_frame(book, panel: EquityPanel, fm: FactorModel, every: int = 5) -> pd.DataFrame:
+    gmv = book.h.abs().sum(axis=1).values
+    dates = [t for t in range(len(panel.dates)) if gmv[t] > 0][::every]
+    df = _feature_frame(panel, fm, dates)
+    df["weight"] = book.h.values[df.t, df.i] / gmv[df.t]
+    return df.drop(columns="i")
+
+
+def _sector_cat(sector: pd.Series, categories: list) -> pd.Categorical:
+    """Fixed category set so XGBoost sees the same sector coding at fit and predict time."""
+    return pd.Categorical(sector.astype("Int64"), categories=categories)
+
+
+def _xgb(classifier: bool = False, seed: int = 0):
+    kw = dict(max_depth=4, n_estimators=250, learning_rate=0.05, reg_lambda=1.0, tree_method="hist",
+              enable_categorical=True, random_state=seed, n_jobs=-1)
+    return xgb.XGBClassifier(**kw) if classifier else xgb.XGBRegressor(**kw)
+
+
+def _linear_design(df: pd.DataFrame, feats: list[str]) -> pd.DataFrame:
+    return pd.get_dummies(df[feats], columns=["sector"], dtype=float).fillna(0.0)
+
+
+def _fit_table(tr: pd.DataFrame, te: pd.DataFrame, feats: list[str], y_scale: float, seed: int):
+    """In- and out-of-sample fit of the tree surrogate and a linear baseline for several targets.
+
+    weight      signed weight / GMV (the target the explanations use)
+    rank        cross-sectional percentile rank of weight per date
+    held_only   signed weight, held names only (the 'how much' half of a two-part model)
+    held        held vs not held, AUC (the 'whether' half)
+
+    Returns the table and the fitted 'weight' surrogate.
+    """
+    rank = lambda d: d.groupby("t").weight.rank(pct=True) - 0.5
+    rows, weight_model = [], None
+    targets = {"weight": (tr, te, lambda d: d.weight / y_scale), "rank": (tr, te, rank),
+               "held_only": (tr[tr.weight != 0], te[te.weight != 0], lambda d: d.weight / y_scale)}
+    for name, (a, b, y) in targets.items():
+        m = _xgb(seed=seed).fit(a[feats], y(a))
+        weight_model = m if name == "weight" else weight_model
+        rows.append({"target": name, "model": "xgboost", "metric": "R²",
+                     "in_sample": r2_score(y(a), m.predict(a[feats])), "out_of_sample": r2_score(y(b), m.predict(b[feats]))})
+        xa = _linear_design(a, feats)
+        xb = _linear_design(b, feats).reindex(columns=xa.columns, fill_value=0.0)
+        lr = RidgeCV(alphas=[0.1, 1.0, 10.0, 100.0]).fit(xa, y(a))
+        rows.append({"target": name, "model": "linear", "metric": "R²",
+                     "in_sample": lr.score(xa, y(a)), "out_of_sample": lr.score(xb, y(b))})
+    ya, yb = tr.weight != 0, te.weight != 0
+    if ya.nunique() == 2 and yb.nunique() == 2:
+        c = _xgb(classifier=True, seed=seed).fit(tr[feats], ya)
+        rows.append({"target": "held", "model": "xgboost", "metric": "AUC",
+                     "in_sample": roc_auc_score(ya, c.predict_proba(tr[feats])[:, 1]),
+                     "out_of_sample": roc_auc_score(yb, c.predict_proba(te[feats])[:, 1])})
+    return pd.DataFrame(rows), weight_model
 
 
 def surrogate_model(strategy: str, book, panel: EquityPanel, fm: FactorModel, seed: int = 0) -> dict:
-    df = _surrogate_frame(book, panel, fm).replace([np.inf, -np.inf], np.nan)
-    feats = [c for c in df.columns if c not in ("weight", "t")]
+    return fit_surrogate(_surrogate_frame(book, panel, fm), strategy, seed=seed)
+
+
+def fit_surrogate(df: pd.DataFrame, strategy: str = "", seed: int = 0, n_shap: int = 6000,
+                  n_interact: int = 1000) -> dict:
+    """Fit and explain the weight surrogate. `df` has one row per (date, stock): feature columns
+    (including an integer-coded `sector`), `weight` (position / GMV) and `t` (date index)."""
+    df = df.replace([np.inf, -np.inf], np.nan)
+    sector_categories = sorted(df.sector.dropna().astype(int).unique())
+    df["sector"] = _sector_cat(df.sector, sector_categories)
+    feats = [c for c in df.columns if c not in NON_FEATURES]
     split = df.t.quantile(0.7)
     tr, te = df[df.t <= split], df[df.t > split]
     y_scale = df.weight.abs().mean()
-    model = HistGradientBoostingRegressor(max_depth=4, max_iter=250, learning_rate=0.05,
-                                          l2_regularization=1.0, random_state=seed,
-                                          categorical_features=[feats.index("sector")])
-    model.fit(tr[feats], tr.weight / y_scale)
-    r2_oos = model.score(te[feats], te.weight / y_scale)
-    sample = te.sample(min(len(te), 6000), random_state=seed)
+    fit, model = _fit_table(tr, te, feats, y_scale, seed)
+    r2_oos = r2_score(te.weight / y_scale, model.predict(te[feats]))
+    r2_is = r2_score(tr.weight / y_scale, model.predict(tr[feats]))
+
+    # Exact TreeSHAP on out-of-sample rows: phi_0 + sum_k phi_k = prediction, in units of weight / GMV
+    sample = te.sample(min(len(te), n_shap), random_state=seed)
+    booster = model.get_booster()
+    contrib = booster.predict(xgb.DMatrix(sample[feats], enable_categorical=True), pred_contribs=True) * y_scale
+    phi = pd.DataFrame(contrib[:, :-1], columns=feats, index=sample.index)
+    base_value = float(contrib[0, -1])
+    mabs = phi.abs().mean()
+
     pi = permutation_importance(model, sample[feats], sample.weight / y_scale, n_repeats=5, random_state=seed)
-    imp = pd.DataFrame({"feature": feats, "importance": pi.importances_mean, "std": pi.importances_std})
+    imp = pd.DataFrame({"feature": feats, "mean_abs_shap": mabs.values, "shap_share": (mabs / mabs.sum()).values,
+                        "perm_importance": pi.importances_mean, "perm_std": pi.importances_std})
     imp["maps_to_core_factor"] = imp.feature.map(FEATURE_TO_FACTOR)
-    imp = imp.sort_values("importance", ascending=False).reset_index(drop=True)
-    top = [f for f in imp.feature.head(4) if f != "sector"][:3]
-    pdp = {}
-    for f in top:
-        r = partial_dependence(model, sample[feats], [f], grid_resolution=15, kind="average")
-        pdp[f] = pd.Series(r["average"][0] * y_scale, index=r["grid_values"][0])
+    imp = imp.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+
+    # SHAP is additive, so correlated features that feed one core factor can be summed before taking |.|
+    group = {f: FEATURE_TO_FACTOR.get(f) or f"unmapped:{f}" for f in feats}
+    gphi = phi.T.groupby(group).sum().T
+    gabs = gphi.abs().mean()
+    by_factor = pd.DataFrame({"group": gabs.index, "mean_abs_shap": gabs.values, "shap_share": (gabs / gabs.sum()).values}
+                             ).sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+
+    # SHAP interaction values: off-diagonal (a, b) + (b, a) is the pair's total interaction effect
+    sub = sample.head(n_interact)
+    iv = booster.predict(xgb.DMatrix(sub[feats], enable_categorical=True), pred_interactions=True)[:, :-1, :-1] * y_scale
+    miv = np.abs(iv).mean(0)
+    main = np.abs(iv[:, range(len(feats)), range(len(feats))]).mean(0)
     inter = []
-    cand = [f for f in imp.feature.head(5) if f != "sector"]
-    if "log_turnover" not in cand:
-        cand.append("log_turnover")
-    for i in range(len(cand)):
-        for j in range(i + 1, len(cand)):
-            inter.append({"a": cand[i], "b": cand[j],
-                          "friedman_h": friedman_h(model, sample[feats].head(1500), cand[i], cand[j])})
-    inter = pd.DataFrame(inter).sort_values("friedman_h", ascending=False)
-    thresh = 0.1 * imp.importance.max()
-    unnamed = imp[(imp.maps_to_core_factor.isna()) & (imp.importance > thresh)].feature.tolist()
-    shap_vals = None
-    try:   # optional dependency
-        import shap  # noqa: F401
-        expl = shap.TreeExplainer(model)
-        sv = expl.shap_values(sample[feats].head(1000))
-        shap_vals = pd.Series(np.abs(sv).mean(0), index=feats).sort_values(ascending=False)
-    except Exception:
-        pass
-    return {"strategy": strategy, "r2_oos": r2_oos, "importance": imp, "partial_dependence": pdp,
-            "interactions": inter, "candidate_factors": unnamed, "shap": shap_vals}
+    for i in range(len(feats)):
+        for j in range(i + 1, len(feats)):
+            inter.append({"a": feats[i], "b": feats[j], "mean_abs_interaction": miv[i, j] + miv[j, i],
+                          "rel_to_main": (miv[i, j] + miv[j, i]) / max(min(main[i], main[j]), 1e-12)})
+    inter = pd.DataFrame(inter).sort_values("mean_abs_interaction", ascending=False).reset_index(drop=True)
+
+    thresh = 0.1 * imp.mean_abs_shap.max()
+    unnamed = imp[(imp.maps_to_core_factor.isna()) & (imp.mean_abs_shap > thresh)].feature.tolist()
+    shap_values = pd.concat([sample[["t", "weight"] + feats].rename(columns=lambda c: f"x_{c}" if c in feats else c),
+                             phi.rename(columns=lambda c: f"shap_{c}")], axis=1)
+    return {"strategy": strategy, "r2_oos": r2_oos, "r2_is": r2_is, "reliable": r2_oos >= SURROGATE_MIN_R2_OOS,
+            "fit": fit, "importance": imp,
+            "by_factor": by_factor, "interactions": inter, "candidate_factors": unnamed,
+            "shap_values": shap_values, "base_value": base_value, "model": model, "y_scale": y_scale,
+            "feats": feats, "sector_categories": sector_categories}
+
+
+# --------------------------------------------------------------------------- #
+# SHAP attribution: return surrogate and two-sided P&L decomposition
+# --------------------------------------------------------------------------- #
+# Per-date cross-sectional return model.  One date's half-universe (~150 names) supports only an additive
+# model: depth-1 stumps (non-linear per characteristic, no interactions), >= 10 names per leaf and few rounds.
+# Deeper or longer-boosted trees lowered cross-fitted R² on both markets.
+RETURN_MODEL_PARAMS = dict(objective="reg:squarederror", max_depth=1, eta=0.1, min_child_weight=10,
+                           reg_lambda=10.0, subsample=0.8, nthread=1)
+RETURN_MODEL_ROUNDS = 50
+
+
+def _shap_group(feature: str) -> str:
+    return FEATURE_TO_FACTOR.get(feature) or f"unmapped:{feature}"
+
+
+@dataclass
+class ReturnSurrogate:
+    """Cross-sectional return model fitted date by date, cross-fitted over two random halves of the universe
+    (each stock's SHAP values come from the model trained on the other half, so a stock's own idiosyncratic
+    return is not absorbed into the characteristic buckets).
+
+    frame: one row per (t, i): features, `ret`, `base` (phi_0 of the scoring model), `shap_<feature>` and
+           `resid`, with base + sum(shap) + resid = ret exactly.
+    fit:   per date, cross-fitted R² next to the linear factor model's in-sample R².
+    """
+    market: str
+    feats: list
+    frame: pd.DataFrame
+    fit: pd.DataFrame
+
+
+def _fit_return_date(t: int, X: pd.DataFrame, y: np.ndarray, seed: int) -> tuple[np.ndarray, np.ndarray]:
+    """Cross-fitted SHAP contributions (n x features+1, last column phi_0) and cross-fitted ridge predictions
+    on the same features as a linear benchmark."""
+    n = len(y)
+    contrib, lin = np.zeros((n, X.shape[1] + 1)), np.zeros(n)
+    if n < 4 * RETURN_MODEL_PARAMS["min_child_weight"]:
+        return contrib, lin                              # too few names: everything stays in the residual
+    scale = y.std() or 1.0
+    Xl = pd.get_dummies(X, columns=["sector"], dtype=float).fillna(0.0).values
+    half = np.zeros(n, bool)
+    half[np.random.default_rng(seed + t).permutation(n)[: n // 2]] = True
+    for score in (half, ~half):
+        train = xgb.DMatrix(X[~score], label=y[~score] / scale, enable_categorical=True)
+        bst = xgb.train({**RETURN_MODEL_PARAMS, "seed": seed}, train, RETURN_MODEL_ROUNDS)
+        contrib[score] = bst.predict(xgb.DMatrix(X[score], enable_categorical=True), pred_contribs=True) * scale
+        lin[score] = Ridge(alpha=10.0).fit(Xl[~score], y[~score]).predict(Xl[score])
+    return contrib, lin
+
+
+def fit_return_surrogate(frame: pd.DataFrame, market: str = "", r2_linear: pd.Series | None = None,
+                         seed: int = 0, n_jobs: int = -1) -> ReturnSurrogate:
+    """`frame`: one row per (t, i) with feature columns (integer-coded `sector`), `t`, `i` and `ret`, the
+    return that start-of-day holdings earn on date t.  `r2_linear` is indexed by t."""
+    frame = frame.replace([np.inf, -np.inf], np.nan).reset_index(drop=True)
+    feats = [c for c in frame.columns if c not in NON_FEATURES]
+    X = frame[feats].assign(sector=_sector_cat(frame.sector, sorted(frame.sector.dropna().astype(int).unique())))
+    y = frame.ret.values
+    by_date = list(frame.groupby("t").indices.items())
+    parts = Parallel(n_jobs=n_jobs)(delayed(_fit_return_date)(int(t), X.iloc[ix], y[ix], seed) for t, ix in by_date)
+    contrib, lin = np.zeros((len(frame), len(feats) + 1)), np.zeros(len(frame))
+    for (_, ix), (c, lp) in zip(by_date, parts):
+        contrib[ix], lin[ix] = c, lp
+    out = pd.concat([frame, pd.DataFrame(contrib[:, :-1], columns=[f"shap_{f}" for f in feats])], axis=1)
+    out["base"] = contrib[:, -1]
+    out["resid"] = y - contrib.sum(axis=1)
+    sst = ((out.ret - out.groupby("t").ret.transform("mean")) ** 2).groupby(out.t).sum()
+    fit = pd.DataFrame({"n": out.groupby("t").size(),
+                        "r2_crossfit": 1 - (out.resid ** 2).groupby(out.t).sum() / sst,
+                        "r2_crossfit_ridge": 1 - pd.Series((y - lin) ** 2).groupby(out.t).sum() / sst})
+    if r2_linear is not None:
+        fit["r2_linear_model"] = r2_linear.reindex(fit.index).values
+    return ReturnSurrogate(market, feats, out, fit)
+
+
+def return_surrogate(market: str, panel: EquityPanel, fm: FactorModel, dates, seed: int = 0) -> ReturnSurrogate:
+    frame = _feature_frame(panel, fm, dates)
+    frame["ret"] = panel.ret.fillna(0.0).values[frame.t, frame.i]     # same return the P&L attribution uses
+    r2 = pd.Series(fm.r2_named.reindex(panel.dates).values)
+    return fit_return_surrogate(frame, market, r2, seed)
+
+
+def _by_group(values: np.ndarray, feats: list, base: np.ndarray, residual: np.ndarray) -> pd.DataFrame:
+    """Columns: base, one per core-factor / unmapped group (SHAP summed within group), residual."""
+    g = pd.DataFrame(values, columns=feats).T.groupby(lambda f: _shap_group(f), sort=False).sum().T
+    return pd.concat([pd.DataFrame({"base": base}), g, pd.DataFrame({"residual": residual})], axis=1)
+
+
+def two_sided_pnl(t: np.ndarray, gmv: np.ndarray, a: pd.DataFrame, b: pd.DataFrame):
+    """Exact two-sided decomposition of holdings P&L  sum_i h_i r_i  with h_i = GMV * w_i.
+
+    a: weight decomposition per row (columns sum to w = h / GMV); b: return decomposition (columns sum to
+    ret); gmv: the row's date GMV.  M[k, j] = sum of GMV * a_k * b_j over rows: P&L of the position slice
+    driven by characteristic k, earned through return driver j.  Column sums are the return-side
+    (cross-sectional) attribution with the actual weights; row sums are the weight-side (holdings /
+    decision) attribution.  Returns M and the daily return-side and weight-side series (index t).
+    """
+    usd = a.values * gmv[:, None]
+    M = pd.DataFrame(usd.T @ b.values, index=a.columns, columns=b.columns)
+    ret_side = pd.DataFrame(usd.sum(axis=1)[:, None] * b.values, columns=b.columns).groupby(t).sum()
+    w_side = pd.DataFrame(usd * b.values.sum(axis=1)[:, None], columns=a.columns).groupby(t).sum()
+    return M, ret_side, w_side
+
+
+def _linear_bucket(factor: str, group: str, shap_groups: set) -> str:
+    if factor == "market":
+        return "base"
+    if group == "industry":
+        return "industry"
+    if factor in shap_groups:
+        return factor
+    return "slow (linear only)" if group == "slow" else "other (linear only)"
+
+
+def shap_attribution(strategy: str, book, sur: dict, rs: ReturnSurrogate, att: AttributionResult) -> dict:
+    """SHAP-based P&L attribution for one strategy, reported next to the official linear attribution.
+
+    Weight side: the strategy's weight surrogate (fit_surrogate).  Return side: the market's per-date return
+    surrogate.  Both are diagnostics; the linear attribution stays the official one.
+    """
+    h, r = book.h.values, book.ret.values
+    gmv = np.abs(h).sum(axis=1)
+    daily = att.daily.xs(strategy, level="strategy")
+    on = (gmv > 0) & book.dates.isin(daily.index)               # dates with holdings and official P&L
+    F = rs.frame[on[rs.frame.t.values]].reset_index(drop=True)
+    t, i = F.t.values, F.i.values
+    w = h[t, i] / gmv[t]
+
+    X = F[sur["feats"]].assign(sector=_sector_cat(F.sector, sur["sector_categories"]))
+    phi = sur["model"].get_booster().predict(xgb.DMatrix(X, enable_categorical=True), pred_contribs=True) \
+        * sur["y_scale"]
+    a = _by_group(phi[:, :-1], sur["feats"], phi[:, -1], w - phi.sum(axis=1))
+    b = _by_group(F[[f"shap_{f}" for f in rs.feats]].values, rs.feats, F.base.values, F.resid.values)
+    M, ret_side, w_side = two_sided_pnl(t, gmv[t], a, b)
+
+    live = np.unique(t)
+    outside = (h * r).sum(axis=1)[live] - ret_side.sum(axis=1).reindex(live).values
+    ret_side["outside_estu"] = outside
+    ret_side.index = book.dates[ret_side.index]
+    w_side.index = book.dates[w_side.index]
+
+    fp = att.factor_pnl[att.factor_pnl.strategy == strategy]
+    groups = set(b.columns) - {"base", "residual"}
+    fp = fp.assign(bucket=[_linear_bucket(f, g, groups) for f, g in zip(fp.factor, fp.group)])
+    lin = fp.pivot_table(index="date", columns="bucket", values="pnl", aggfunc="sum")
+    lin["residual"] = daily.specific
+    lin, shp = lin.reindex(ret_side.index).fillna(0.0), ret_side
+
+    order = (["base", "industry"] + [g for g in b.columns if g in FEATURE_TO_FACTOR.values() and g != "industry"]
+             + [g for g in b.columns if g.startswith("unmapped:")]
+             + [c for c in ("other (linear only)", "slow (linear only)") if c in lin] + ["residual", "outside_estu"])
+    lin, shp = lin.reindex(columns=order, fill_value=0.0), shp.reindex(columns=order, fill_value=0.0)
+    corr = pd.Series({c: lin[c].corr(shp[c]) if lin[c].std() > 0 and shp[c].std() > 0 else np.nan
+                      for c in order})
+    comparison = pd.DataFrame({"bucket": order, "linear_usd": lin.sum().values, "shap_usd": shp.sum().values,
+                               "daily_corr": corr.values})
+    comparison["diff_usd"] = comparison.shap_usd - comparison.linear_usd
+    total = {"bucket": "total", "linear_usd": lin.values.sum(), "shap_usd": shp.values.sum(),
+             "daily_corr": lin.sum(axis=1).corr(shp.sum(axis=1))}
+    total["diff_usd"] = total["shap_usd"] - total["linear_usd"]
+    comparison = pd.concat([comparison, pd.DataFrame([total])], ignore_index=True)
+
+    decision = w_side.sum()
+    decision["outside_estu"] = outside.sum()
+    return {"strategy": strategy, "comparison": comparison, "matrix": M,
+            "decision": decision, "daily_linear": lin, "daily_shap": shp,
+            "weight_reliable": sur["reliable"], "weight_r2_oos": sur["r2_oos"],
+            "return_r2_crossfit": float(rs.fit.r2_crossfit.reindex(live).mean()),
+            "return_r2_crossfit_ridge": float(rs.fit.r2_crossfit_ridge.reindex(live).mean()),
+            "return_r2_linear_model": float(rs.fit.r2_linear_model.reindex(live).mean())
+            if "r2_linear_model" in rs.fit else np.nan}
 
 
 # --------------------------------------------------------------------------- #

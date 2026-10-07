@@ -4,15 +4,15 @@
 
 ## Firm risk
 
-- Gross exposure: **188.9m USD**; predicted daily vol **0.46m** (annualised 7.4m, 3.9% of gross); 1-day 99% normal VaR **1.08m**.
+- Gross exposure: **188.9m USD**; predicted daily vol **0.47m** (annualised 7.5m, 4.0% of gross); 1-day 99% normal VaR **1.10m**.
 - Diversification benefit across local models: 0.32m daily vol.
 
 | index | standalone_daily_vol | contribution_daily_vol | share |
 |---|---|---|---|
-| US | 0.33m | 0.22m | 46.6% |
-| CN | 0.12m | 27,815 | 6.0% |
-| CRYPTO | 0.34m | 0.22m | 47.4% |
-| FX | 1,286 | -15 | -0.0% |
+| US | 0.33m | 0.22m | 47.1% |
+| CN | 0.12m | 26,619 | 5.7% |
+| CRYPTO | 0.34m | 0.22m | 47.3% |
+| FX | 1,291 | 4 | 0.0% |
 
 ![firm risk](charts/firm_risk.png)
 
@@ -20,16 +20,16 @@
 
 | index | contribution_daily_vol | share_of_firm_vol |
 |---|---|---|
-| CRYPTO:funding | 0.10m | 21.6% |
-| US:st_reversal | 55,273 | 11.9% |
-| CRYPTO:sec_Smart Contract L1 | 49,674 | 10.7% |
-| US:volatility | 31,915 | 6.9% |
-| US:crowding | 31,132 | 6.7% |
-| CN:size | 13,931 | 3.0% |
-| US:crypto_beta | 13,638 | 2.9% |
-| US:ind_Energy | 8,980 | 1.9% |
-| CRYPTO:sec_Exchange Token | 8,204 | 1.8% |
-| CRYPTO:momentum | -7,447 | -1.6% |
+| CRYPTO:funding | 0.10m | 22.3% |
+| US:st_reversal | 53,777 | 11.4% |
+| CRYPTO:sec_Smart Contract L1 | 50,397 | 10.7% |
+| US:volatility | 31,287 | 6.6% |
+| US:crowding | 28,195 | 6.0% |
+| US:crypto_beta | 13,759 | 2.9% |
+| CN:size | 12,994 | 2.8% |
+| US:ind_Energy | 9,630 | 2.0% |
+| US:retail_attention | 8,431 | 1.8% |
+| CRYPTO:sec_Exchange Token | 7,790 | 1.7% |
 
 ## Limit status (latest day)
 
@@ -38,7 +38,7 @@
 | B1_US_INTRADAY | style:size | 0.848 | 0.600 | 141.3% | BREACH ⛔ | no |
 | B1_US_INTRADAY | shock_loss:vol_shock | 0.007 | 0.006 | 123.4% | BREACH ⛔ | no |
 | B1_US_INTRADAY | industry_net_max | 0.125 | 0.120 | 103.8% | BREACH ⛔ | no |
-| B1_US_INTRADAY | predicted_vol | 0.091 | 0.100 | 90.7% | WARN ⚠ | no |
+| B1_US_INTRADAY | predicted_vol | 0.090 | 0.100 | 90.4% | WARN ⚠ | no |
 | B1_US_INTRADAY | style:overnight_gap | 0.539 | 0.600 | 89.9% | WARN ⚠ | no |
 | C1_US_EVENT | max_pct_adv | 0.211 | 0.150 | 141.0% | BREACH ⛔ | no |
 | D1_US_CROWDING | style:crowding | 0.825 | 0.600 | 137.5% | BREACH ⛔ | no |
@@ -54,38 +54,38 @@
 | 2026-09-04 | A1_US_STATARB | industry_net_max | 0.131 | 0.120 | 109.5% | 48 |
 | 2026-09-05 | E1_CRYPTO_CARRY | style:momentum | 0.626 | 0.600 | 104.4% | 6 |
 | 2026-09-05 | E1_CRYPTO_CARRY | predicted_vol | 0.305 | 0.300 | 101.6% | 105 |
-| 2026-09-08 | A1_US_STATARB | style:st_reversal | 0.660 | 0.600 | 110.0% | 121 |
 | 2026-09-08 | B1_US_INTRADAY | style:beta | 0.611 | 0.600 | 101.8% | 28 |
+| 2026-09-08 | A1_US_STATARB | style:st_reversal | 0.660 | 0.600 | 110.0% | 121 |
 | 2026-09-09 | D1_US_CROWDING | style:volatility | 0.601 | 0.600 | 100.1% | 158 |
 | 2026-09-09 | B1_US_INTRADAY | style:overnight_gap | 0.652 | 0.600 | 108.6% | 110 |
-| 2026-09-10 | B1_US_INTRADAY | style:size | 0.623 | 0.600 | 103.8% | 306 |
 | 2026-09-10 | E1_CRYPTO_CARRY | beta_adj_net | 0.123 | 0.100 | 123.3% | 86 |
 | 2026-09-10 | A2_CN_STATARB | industry_net_max | 0.126 | 0.120 | 104.8% | 16 |
+| 2026-09-10 | B1_US_INTRADAY | style:size | 0.623 | 0.600 | 103.8% | 306 |
 | 2026-09-11 | B1_US_INTRADAY | style:st_momentum | 0.768 | 0.600 | 128.0% | 57 |
-| 2026-09-14 | A1_US_STATARB | max_pct_adv | 0.154 | 0.150 | 102.8% | 3 |
 | 2026-09-14 | B1_US_INTRADAY | industry_net_max | 0.125 | 0.120 | 103.9% | 130 |
+| 2026-09-14 | A1_US_STATARB | max_pct_adv | 0.154 | 0.150 | 102.8% | 3 |
 | 2026-09-15 | B1_US_INTRADAY | style:overnight_gap | 0.633 | 0.600 | 105.4% | 110 |
-| 2026-09-15 | A2_CN_STATARB | predicted_vol | 0.100 | 0.100 | 100.2% | 155 |
+| 2026-09-15 | A2_CN_STATARB | predicted_vol | 0.102 | 0.100 | 101.5% | 150 |
 | 2026-09-15 | A2_CN_STATARB | style:st_reversal | 0.607 | 0.600 | 101.1% | 15 |
 | 2026-09-16 | E1_CRYPTO_CARRY | max_name | 0.121 | 0.120 | 100.7% | 31 |
 | 2026-09-22 | E1_CRYPTO_CARRY | max_name | 0.124 | 0.120 | 103.0% | 31 |
-| 2026-09-25 | B1_US_INTRADAY | shock_loss:vol_shock | 0.006 | 0.006 | 101.5% | 460 |
-| 2026-09-28 | A2_CN_STATARB | industry_net_max | 0.121 | 0.120 | 101.1% | 16 |
+| 2026-09-25 | B1_US_INTRADAY | shock_loss:vol_shock | 0.006 | 0.006 | 101.5% | 459 |
 | 2026-09-28 | E1_CRYPTO_CARRY | beta_adj_net | 0.120 | 0.100 | 119.7% | 86 |
-| 2026-09-29 | E1_CRYPTO_CARRY | style:btc_beta | 0.632 | 0.600 | 105.4% | 7 |
+| 2026-09-28 | A2_CN_STATARB | industry_net_max | 0.121 | 0.120 | 101.1% | 16 |
 | 2026-09-29 | E1_CRYPTO_CARRY | predicted_vol | 0.326 | 0.300 | 108.6% | 105 |
-| 2026-09-30 | B1_US_INTRADAY | style:size | 0.848 | 0.600 | 141.3% | 306 |
+| 2026-09-29 | E1_CRYPTO_CARRY | style:btc_beta | 0.632 | 0.600 | 105.4% | 7 |
 | 2026-09-30 | B1_US_INTRADAY | industry_net_max | 0.125 | 0.120 | 103.8% | 130 |
+| 2026-09-30 | B1_US_INTRADAY | style:size | 0.848 | 0.600 | 141.3% | 306 |
 
 ## Strategy exposures
 
 | strategy | as_of | gross | net_pct | beta_adj_net_pct | top_styles | stat_1 | pred_vol_ann_pct_gmv | factor_risk_share |
 |---|---|---|---|---|---|---|---|---|
-| A1_US_STATARB | 2026-09-30 | 59.27m | 0.0% | 1.5% | st_reversal +0.33, liquidity -0.26, overnight_gap -0.16 | 0.038 | 3.8% | 64.2% |
-| A2_CN_STATARB | 2026-09-30 | 24.38m | -2.0% | -4.0% | size -0.37, overnight_gap -0.32, st_reversal +0.32 | -0.278 | 7.5% | 74.8% |
-| B1_US_INTRADAY | 2026-09-30 | 5.97m | 2.6% | -1.5% | size -0.85, overnight_gap -0.54, volatility +0.42 | -0.250 | 9.1% | 80.9% |
-| C1_US_EVENT | 2026-09-30 | 29.70m | 0.8% | -1.6% | liquidity -0.18, size +0.17, volatility +0.13 | -0.138 | 5.5% | 19.3% |
-| D1_US_CROWDING | 2026-09-30 | 49.25m | -0.0% | -1.4% | crowding -0.82, volatility +0.50, size -0.27 | 0.097 | 6.6% | 85.5% |
+| A1_US_STATARB | 2026-09-30 | 59.27m | 0.0% | 1.5% | st_reversal +0.33, liquidity -0.26, overnight_gap -0.16 | 0.051 | 3.8% | 65.5% |
+| A2_CN_STATARB | 2026-09-30 | 24.38m | -2.0% | -4.0% | size -0.37, overnight_gap -0.32, st_reversal +0.32 | 0.280 | 7.5% | 75.4% |
+| B1_US_INTRADAY | 2026-09-30 | 5.97m | 2.6% | -1.5% | size -0.85, overnight_gap -0.54, volatility +0.42 | -0.238 | 9.0% | 81.0% |
+| C1_US_EVENT | 2026-09-30 | 29.70m | 0.8% | -1.6% | liquidity -0.18, size +0.17, retail_attention +0.16 | -0.120 | 5.6% | 20.5% |
+| D1_US_CROWDING | 2026-09-30 | 49.25m | -0.0% | -1.4% | crowding -0.82, volatility +0.50, size -0.27 | 0.100 | 6.5% | 85.6% |
 | E1_CRYPTO_CARRY | 2026-09-30 | 20.33m | -0.5% | -7.8% | funding -0.49, btc_beta -0.26, momentum -0.09 | 0.362 | 26.2% | 71.4% |
 
 Style exposures are in cross-sectional standard deviations per dollar of gross.
@@ -96,13 +96,13 @@ Expected P&L (USD) for a 3-sigma move in each shock. *Model*: E[P&L | shock] fro
 
 | strategy | fx (empirical) | fx (model) | liq_shock (empirical) | liq_shock (model) | rates (empirical) | rates (model) | us_session (empirical) | us_session (model) | vol_shock (empirical) | vol_shock (model) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| A1_US_STATARB | -14,135 | -65,459 | -0.21m | -23,155 | -52,843 | -42,933 | – | – | -0.23m | 30,524 |
-| A2_CN_STATARB | 8,615 | 37,195 | -69,771 | -24,381 | -9,138 | -5,989 | -34,106 | 34,062 | -85,332 | -36,433 |
-| B1_US_INTRADAY | 192 | -4,493 | -54,693 | -8,852 | -3,322 | -3,183 | – | – | -99,776 | -35,154 |
-| C1_US_EVENT | -21,159 | -11,035 | 93,101 | -2,185 | -58,709 | 2,310 | – | – | 0.10m | 13,391 |
-| D1_US_CROWDING | -20,113 | -48,216 | -65,783 | -40,995 | -39,218 | -27,202 | – | – | -0.10m | -0.11m |
+| A1_US_STATARB | -14,135 | -63,524 | -0.21m | -18,132 | -52,843 | -36,229 | – | – | -0.23m | 31,632 |
+| A2_CN_STATARB | 8,615 | 40,115 | -69,771 | -25,756 | -9,138 | -6,079 | -34,106 | 32,349 | -85,332 | -34,930 |
+| B1_US_INTRADAY | 192 | -4,559 | -54,693 | -9,192 | -3,322 | -3,227 | – | – | -99,776 | -35,258 |
+| C1_US_EVENT | -21,159 | -12,091 | 93,101 | -1,834 | -58,709 | 5,087 | – | – | 0.10m | 12,837 |
+| D1_US_CROWDING | -20,113 | -48,215 | -65,783 | -39,430 | -39,218 | -24,260 | – | – | -0.10m | -0.11m |
 
-- Scheduled macro announcements scale macro-sensitive factor variance by a learned multiplier (latest 1.90x on US macro days).
+- Scheduled macro announcements scale macro-sensitive factor variance by a learned multiplier (latest 1.89x on US macro days).
 
 ## Stress tests (current holdings, USD)
 
@@ -112,25 +112,25 @@ The last column scales shocks on factors the crowding monitor flags as crowded.
 
 | scenario | A1_US_STATARB | A2_CN_STATARB | B1_US_INTRADAY | C1_US_EVENT | D1_US_CROWDING | E1_CRYPTO_CARRY | FIRM | FIRM (crowding-scaled) |
 |---|---|---|---|---|---|---|---|---|
-| Aug-2007 quant deleveraging | -1.99m | -1.09m | 75,425 | -47,471 | -1.68m | -0.15m | -4.87m | -5.20m |
-| Aug-2024 carry unwind | 0.10m | -59,235 | -54,409 | 65,369 | -0.35m | 47,620 | -0.25m | -0.32m |
-| Jan-2021 short squeeze | -0.56m | -72,682 | 30,021 | 0.10m | -0.88m | 0 | -1.38m | -1.67m |
-| Mar-2020 COVID crash | -0.23m | -67,758 | -30,642 | -33,099 | -0.54m | 0.43m | -0.47m | -0.55m |
-| May-2022 LUNA collapse | -0.12m | 0 | 24,922 | -58,647 | -0.55m | 3.11m | 2.41m | 2.41m |
-| Nov-2020 momentum/value rotation | 66,647 | 0.19m | -33,882 | 49,517 | 0.35m | 97,396 | 0.71m | 0.76m |
-| Nov-2022 FTX failure | -39,981 | 0 | 8,307 | -19,549 | -0.18m | 1.31m | 1.08m | 1.08m |
-| Rates shock / hawkish surprise | -30,581 | -5,193 | -17,545 | -9,087 | -71,994 | 0 | -0.13m | -0.13m |
+| Aug-2007 quant deleveraging | -1.97m | -1.03m | 74,255 | -47,382 | -1.63m | -0.15m | -4.75m | -5.05m |
+| Aug-2024 carry unwind | 0.10m | -60,319 | -54,473 | 65,173 | -0.34m | 47,620 | -0.24m | -0.30m |
+| Jan-2021 short squeeze | -0.55m | -55,242 | 28,903 | 0.10m | -0.83m | 0 | -1.31m | -1.58m |
+| Mar-2020 COVID crash | -0.22m | -66,824 | -30,820 | -34,746 | -0.53m | 0.43m | -0.46m | -0.54m |
+| May-2022 LUNA collapse | -0.12m | 0 | 25,520 | -60,055 | -0.56m | 3.11m | 2.39m | 2.39m |
+| Nov-2020 momentum/value rotation | 65,490 | 0.18m | -33,814 | 48,496 | 0.35m | 97,396 | 0.70m | 0.75m |
+| Nov-2022 FTX failure | -40,940 | 0 | 8,507 | -20,018 | -0.19m | 1.31m | 1.07m | 1.07m |
+| Rates shock / hawkish surprise | -30,512 | -4,913 | -17,357 | -9,116 | -71,544 | 0 | -0.13m | -0.13m |
 
 ### Historical factor replay (embedded stress days)
 
 | episode | date | A1_US_STATARB | A2_CN_STATARB | B1_US_INTRADAY | C1_US_EVENT | D1_US_CROWDING | E1_CRYPTO_CARRY |
 |---|---|---|---|---|---|---|---|
-| Crypto liquidation cascade | 2025-10-10 | -0.96m | – | 37,951 | -50,811 | -1.12m | 0.60m |
-| Global carry-trade unwind | 2024-08-05 | -1.25m | -0.47m | 589 | 0.12m | -1.54m | -0.43m |
-| Momentum/value rotation | 2025-11-10 | 152 | -0.12m | -22,400 | 11,415 | 0.19m | – |
-| Quant deleveraging | 2025-03-11 | -0.54m | -0.16m | 5,141 | 35,385 | -0.55m | – |
-| Retail short squeeze | 2026-01-27 | -0.25m | – | 15,397 | -82,976 | -0.11m | – |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | -1.27m | -76,931 | -11,990 | 38,050 | -0.83m | 0.24m |
+| Crypto liquidation cascade | 2025-10-10 | -0.97m | – | 33,319 | -59,317 | -1.11m | 0.60m |
+| Global carry-trade unwind | 2024-08-05 | -1.18m | -0.47m | -1,377 | 0.16m | -1.50m | -0.43m |
+| Momentum/value rotation | 2025-11-10 | -54,129 | -0.15m | -16,191 | 4,957 | 0.19m | – |
+| Quant deleveraging | 2025-03-11 | -0.58m | -0.14m | -1,295 | 16,356 | -0.56m | – |
+| Retail short squeeze | 2026-01-27 | -0.22m | – | 12,543 | -62,530 | -91,005 | – |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | -1.37m | -85,721 | -11,027 | -11,208 | -0.84m | 0.24m |
 
 ### Model-free replay (actual stock returns of the stress day on today's holdings)
 
@@ -162,8 +162,8 @@ Composite of short interest / float, days-to-cover, prime-broker borrow fee, bor
 
 | market | marginal_r2 | pct_days_abs_t_gt_2 | ann_vol | resid_corr_reduction | max_abs_z_on_squeeze_days | decision | coverage |
 |---|---|---|---|---|---|---|---|
-| US | 0.013 | 0.402 | 4.4% | -0.020 | 5.097 | keep in core | 100.0% |
-| CN | 0.009 | 0.162 | 4.4% | – | 0.666 | keep in core | 39.5% |
+| US | 0.013 | 0.402 | 4.3% | -0.022 | 5.366 | keep in core | 100.0% |
+| CN | 0.009 | 0.156 | 4.4% | – | 0.352 | keep in core | 39.5% |
 
 Coverage below 100% (CN) reflects names that cannot be borrowed; they score neutral.
 
@@ -175,31 +175,35 @@ Comomentum: average pairwise correlation of residual returns within each factor'
 
 | factor | comomentum | z | si_short_leg_ratio | crowded | stress_multiplier |
 |---|---|---|---|---|---|
-| crowding | -0.005 | 1.363 | 0.289 | no | 1.341 |
-| volatility | 0.003 | 0.613 | 0.868 | no | 1.153 |
-| liquidity | -0.009 | 0.207 | 0.966 | no | 1.052 |
-| overnight_gap | 0.010 | -0.120 | 1.080 | no | 1.000 |
-| beta | 0.002 | -0.305 | 0.951 | no | 1.000 |
-| stat_1 | 0.057 | -0.328 | 0.880 | no | 1.000 |
-| st_momentum | 0.011 | -0.662 | 0.822 | no | 1.000 |
-| stat_2 | 0.003 | -1.069 | 0.822 | no | 1.000 |
-| size | -0.014 | -1.135 | 1.021 | no | 1.000 |
-| st_reversal | 0.014 | -1.288 | 1.158 | no | 1.000 |
+| crowding | -0.005 | 1.289 | 0.289 | no | 1.322 |
+| volatility | 0.003 | 0.533 | 0.868 | no | 1.133 |
+| liquidity | -0.009 | 0.100 | 0.966 | no | 1.025 |
+| overnight_gap | 0.010 | -0.114 | 1.080 | no | 1.000 |
+| stat_1 | 0.058 | -0.285 | 0.817 | no | 1.000 |
+| beta | 0.001 | -0.319 | 0.951 | no | 1.000 |
+| retail_attention | -0.006 | -0.624 | 1.122 | no | 1.000 |
+| st_momentum | 0.011 | -0.676 | 0.822 | no | 1.000 |
+| stat_2 | 0.008 | -0.858 | 0.858 | no | 1.000 |
+| size | -0.015 | -0.978 | 1.021 | no | 1.000 |
+| st_reversal | 0.014 | -1.203 | 1.158 | no | 1.000 |
+| etf_ownership | -0.016 | -1.255 | 1.103 | no | 1.000 |
 
 **CN**
 
 | factor | comomentum | z | si_short_leg_ratio | crowded | stress_multiplier |
 |---|---|---|---|---|---|
-| overnight_gap | 0.031 | 2.864 | 0.891 | yes | 1.716 |
-| liquidity | -0.011 | 1.173 | 0.847 | no | 1.293 |
-| volatility | -0.002 | 0.424 | 0.618 | no | 1.106 |
-| st_reversal | 0.023 | 0.017 | 0.744 | no | 1.004 |
-| st_momentum | 0.009 | -0.446 | 1.423 | no | 1.000 |
-| stat_1 | 0.027 | -0.601 | 0.401 | no | 1.000 |
-| stat_2 | 0.021 | -0.658 | 1.036 | no | 1.000 |
-| beta | -0.020 | -1.353 | 1.001 | no | 1.000 |
-| size | -0.029 | -1.572 | 1.125 | no | 1.000 |
-| crowding | -0.033 | -1.624 | 1.179 | no | 1.000 |
+| overnight_gap | 0.028 | 2.543 | 0.891 | yes | 1.636 |
+| liquidity | -0.012 | 1.008 | 0.847 | no | 1.252 |
+| etf_ownership | -0.019 | 0.902 | 0.796 | no | 1.226 |
+| volatility | -0.001 | 0.600 | 0.618 | no | 1.150 |
+| st_reversal | 0.021 | -0.094 | 0.744 | no | 1.000 |
+| stat_1 | 0.038 | -0.243 | 1.608 | no | 1.000 |
+| st_momentum | 0.008 | -0.465 | 1.423 | no | 1.000 |
+| stat_2 | 0.020 | -0.648 | 0.769 | no | 1.000 |
+| retail_attention | -0.011 | -0.654 | 0.923 | no | 1.000 |
+| beta | -0.018 | -0.959 | 1.001 | no | 1.000 |
+| size | -0.031 | -1.751 | 1.125 | no | 1.000 |
+| crowding | -0.034 | -1.894 | 1.179 | no | 1.000 |
 
 ![crowding](charts/crowding_monitor_US.png)
 
@@ -237,7 +241,7 @@ Firm-wide positions summed across teams. No single team can see this risk.
 |---|---|---|---|---|---|
 | 2026-07-20 | A2_CN_STATARB | us_session | -3.257 | -0.030 | 0.024 |
 | 2026-07-28 | C1_US_EVENT | crowding | -3.683 | -0.531 | -0.022 |
-| 2026-07-29 | C1_US_EVENT | stat_1 | -3.706 | -0.322 | 0.106 |
+| 2026-07-28 | C1_US_EVENT | stat_1 | -3.548 | -0.422 | 0.040 |
 | 2026-07-30 | C1_US_EVENT | size | 3.547 | 0.115 | -0.124 |
 | 2026-07-30 | C1_US_EVENT | fx | -4.081 | -0.042 | 0.044 |
 | 2026-08-13 | C1_US_EVENT | beta | 3.588 | 0.069 | -0.265 |
@@ -290,7 +294,7 @@ Stacking ratio near 1 = teams hold the same tilt; near 0 = they offset.
 | st_reversal | 32.08m | 40.47m | 79.3% |
 | size | -25.41m | 35.64m | 71.3% |
 | volatility | 23.92m | 31.28m | 76.5% |
-| stat_1 | 11.30m | 22.37m | 50.5% |
+| stat_1 | 14.30m | 21.88m | 65.3% |
 | liquidity | -10.34m | 20.22m | 51.2% |
 | st_momentum | -3.67m | 17.35m | 21.1% |
 | beta | -9.56m | 16.91m | 56.5% |

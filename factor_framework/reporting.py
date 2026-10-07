@@ -27,6 +27,7 @@ from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 
 from .attribution import COMPONENTS  # noqa: E402
 from .config import TRADING_DAYS  # noqa: E402
+from .diagnostics import SURROGATE_MIN_R2_OOS  # noqa: E402
 
 # Validated reference palette (dataviz skill): fixed categorical order, recessive chrome
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
@@ -328,13 +329,92 @@ def hedge_suggestions(res, n: int = 2) -> pd.DataFrame:
 # --------------------------------------------------------------------------- #
 # Reports
 # --------------------------------------------------------------------------- #
+def _surrogate_section(sur: dict) -> list[str]:
+    """PM-report block for the XGBoost weight surrogate. SHAP values are shown in bp of GMV."""
+    fit = sur["fit"].copy()
+    lines = [f"**What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; "
+             f"R² {sur['r2_is']:.2f} in sample, {sur['r2_oos']:.2f} out of sample on the last 30% of dates)", ""]
+    if not sur["reliable"]:
+        lines += [f"*The surrogate does not generalise (out-of-sample R² below "
+                  f"{SURROGATE_MIN_R2_OOS:.2f}): the attributions below describe an overfit model and are not "
+                  f"used to propose factors.*", ""]
+    imp = sur["importance"].head(8).copy()
+    imp["mean_abs_shap_bp"] = imp.mean_abs_shap * 1e4
+    lines += [md_table(imp[["feature", "mean_abs_shap_bp", "shap_share", "perm_importance", "maps_to_core_factor"]],
+                       {"shap_share": "pct"}), "",
+              "Grouped by core factor (SHAP summed within a group, so correlated inputs are not split): " + "; ".join(
+                  f"{r.group} {r.shap_share:.0%}" for r in sur["by_factor"].head(5).itertuples()), "",
+              "Strongest interactions (mean |SHAP interaction|, bp): " + "; ".join(
+                  f"{r.a} × {r.b} = {r.mean_abs_interaction * 1e4:.1f}" for r in sur["interactions"].head(3).itertuples()),
+              "",
+              "Fit by target (linear = ridge on the same features; trees adding little over linear means the "
+              "selection is close to a linear screen):", "",
+              md_table(fit), ""]
+    return lines
+
+
+SHAP_XCHECK_MIN_CORR = 0.3        # daily linear-vs-SHAP correlation below this is a disagreement ...
+SHAP_XCHECK_MATERIAL = 0.02       # ... when the bucket's P&L is at least this share of |holdings P&L|
+
+
+def _signed_usd(v: float) -> str:
+    return ("+" if v >= 0 else "-") + _fmt(abs(float(v)), "usd")
+
+
+def _shap_xcheck_flags(sa: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Buckets where the two attributions disagree, and characteristics outside the core model that earn P&L."""
+    c = sa["comparison"]
+    total = abs(c.loc[c.bucket == "total", "linear_usd"].iloc[0]) or 1.0
+    big = np.maximum(c.linear_usd.abs(), c.shap_usd.abs()) >= SHAP_XCHECK_MATERIAL * total
+    disagree = c[big & (c.daily_corr < SHAP_XCHECK_MIN_CORR) & (c.bucket != "total")]
+    unmapped = c[big & c.bucket.str.startswith("unmapped:")]
+    return disagree, unmapped
+
+
+def _shap_attribution_section(sa: dict) -> list[str]:
+    """PM-report block: SHAP attribution next to the official linear attribution (USD over the live window)."""
+    c = sa["comparison"]
+    c = c[(c.linear_usd.abs() + c.shap_usd.abs()) > 0]
+    lines = ["**SHAP cross-check of the linear attribution** (return surrogate: per-date additive XGBoost, "
+             f"cross-fitted R² {sa['return_r2_crossfit']:.3f} vs {sa['return_r2_crossfit_ridge']:.3f} for a "
+             f"cross-fitted linear model on the same features and {sa['return_r2_linear_model']:.3f} in-sample for "
+             "the factor model). Both columns add up to the same holdings P&L. The cross-fitted surrogate cannot "
+             "absorb a stock's own return, so its characteristic buckets are smaller and its residual larger: "
+             "read agreement from the daily correlation and sign, not the size of the totals.", "",
+             md_table(c[["bucket", "linear_usd", "shap_usd", "diff_usd", "daily_corr"]],
+                      {"linear_usd": "usd", "shap_usd": "usd", "diff_usd": "usd"}), ""]
+    disagree, unmapped = _shap_xcheck_flags(sa)
+    if len(disagree):
+        lines += ["Disagreement (daily correlation below "
+                  f"{SHAP_XCHECK_MIN_CORR:.1f} on a material bucket): " + "; ".join(
+                      f"{r.bucket} (corr {r.daily_corr:+.2f})" for r in disagree.itertuples()), ""]
+    d = sa["decision"].drop(["residual", "outside_estu"], errors="ignore")
+    d = d.reindex(d.abs().sort_values(ascending=False).index).head(5)
+    note = "" if sa["weight_reliable"] else " *Weight surrogate does not generalise; treat as indicative only.*"
+    lines += ["Decision view (weight-side SHAP: P&L of the slice of the book each characteristic explains; "
+              f"unexplained weights {_signed_usd(sa['decision'].get('residual', np.nan))}): " + "; ".join(
+                  f"{k} {_signed_usd(v)}" for k, v in d.items()) + "." + note, ""]
+    return lines
+
+
 def _findings(res, score: pd.DataFrame, lat: pd.DataFrame) -> list[str]:
     out = []
     D = res.diagnostics
+    for s, sa in D.get("shap_attribution", {}).items():
+        disagree, unmapped = _shap_xcheck_flags(sa)
+        if len(disagree):
+            out.append(f"**{s}**: linear and SHAP attribution disagree on " + ", ".join(
+                f"{r.bucket} (daily corr {r.daily_corr:+.2f}; linear {_signed_usd(r.linear_usd)}, "
+                f"SHAP {_signed_usd(r.shap_usd)})" for r in disagree.itertuples()) + ".")
+        if len(unmapped):
+            out.append(f"**{s}** earns P&L through characteristics outside the core model (SHAP return side): " +
+                       ", ".join(f"{r.bucket.split(':', 1)[1]} {_signed_usd(r.shap_usd)}" for r in unmapped.itertuples())
+                       + ".")
     for s, sur in D.get("surrogate", {}).items():
-        if sur["candidate_factors"]:
+        if sur["candidate_factors"] and sur["reliable"]:
             out.append(f"**{s}** selects on characteristics outside the core model: "
-                       f"{', '.join(sur['candidate_factors'])} (surrogate out-of-sample R² {sur['r2_oos']:.2f}).")
+                       f"{', '.join(sur['candidate_factors'])} (XGBoost surrogate out-of-sample R² {sur['r2_oos']:.2f}; "
+                       f"mean |SHAP|).")
     pca = D.get("residual_pca", {}).get("US")
     if pca is not None:
         a = pca["associations"]
@@ -548,7 +628,7 @@ def write_risk_report(res, out: Path, charts: Path) -> str:
               f"- US: {len(dq)} flagged observations; CN: {len(res.panels['CN'].data_issues)} flagged observations "
               "(large moves without corporate action - verified against resumption-from-suspension and stress days).", ""]
     txt = "\n".join(lines)
-    (out / "risk_report.md").write_text(txt)
+    (out / "risk_report.md").write_text(txt, encoding="utf-8", newline="\n")
     return txt
 
 
@@ -610,11 +690,10 @@ def write_pm_report(res, out: Path, charts: Path) -> str:
                                                             "vol_reduction_pct": "pct"}), ""]
         sur = res.diagnostics.get("surrogate", {}).get(s)
         if sur:
-            lines += [f"**What the model is effectively selecting on** (gradient-boosting surrogate, out-of-sample "
-                      f"R² {sur['r2_oos']:.2f}; permutation importance)", "",
-                      md_table(sur["importance"].head(8)), "",
-                      "Strongest interactions (Friedman H): " + "; ".join(
-                          f"{r.a} × {r.b} = {r.friedman_h:.2f}" for r in sur["interactions"].head(3).itertuples()), ""]
+            lines += _surrogate_section(sur)
+        sa = res.diagnostics.get("shap_attribution", {}).get(s)
+        if sa:
+            lines += _shap_attribution_section(sa)
         rel = res.diagnostics["releases"]
         rel = rel[(rel.strategy == s)]
         if len(rel):
@@ -628,7 +707,7 @@ def write_pm_report(res, out: Path, charts: Path) -> str:
                   "Agreement in sign confirms the holdings pipeline; the returns-based estimates are noisier and lag.", "",
                   md_table(agg, index=True), ""]
     txt = "\n".join(lines)
-    (out / "pm_report.md").write_text(txt)
+    (out / "pm_report.md").write_text(txt, encoding="utf-8", newline="\n")
     return txt
 
 
@@ -661,7 +740,7 @@ def write_management_summary(res, out: Path) -> str:
     lines += ["## Firm-level tail risk (hypothetical scenarios on current holdings)", "",
               md_table(hyp, {c: "usd" for c in hyp.columns}, index=True), ""]
     txt = "\n".join(lines)
-    (out / "management_summary.md").write_text(txt)
+    (out / "management_summary.md").write_text(txt, encoding="utf-8", newline="\n")
     return txt
 
 
@@ -776,7 +855,7 @@ def write_validation_report(res, out: Path) -> str:
                    "result": "tracked in production (decision log), not measurable on synthetic data"},
               ])), ""]
     txt = "\n".join(lines)
-    (out / "validation_report.md").write_text(txt)
+    (out / "validation_report.md").write_text(txt, encoding="utf-8", newline="\n")
     return txt
 
 
@@ -853,6 +932,15 @@ def write_all(res, out: Path) -> None:
         res.intraday.macro_bars.to_csv(tables / "intraday_macro_bars.csv", index=False)
     for s, sur in res.diagnostics["surrogate"].items():
         sur["importance"].to_csv(tables / f"surrogate_importance_{s}.csv", index=False)
+        sur["fit"].to_csv(tables / f"surrogate_fit_{s}.csv", index=False)
+        sur["interactions"].to_csv(tables / f"surrogate_interactions_{s}.csv", index=False)
+        sur["shap_values"].to_csv(tables / f"surrogate_shap_{s}.csv.gz", index=False)
+    for s, sa in res.diagnostics.get("shap_attribution", {}).items():
+        sa["comparison"].to_csv(tables / f"shap_attribution_comparison_{s}.csv", index=False)
+        sa["matrix"].to_csv(tables / f"shap_pnl_matrix_{s}.csv")
+        sa["daily_shap"].to_csv(tables / f"shap_attribution_daily_{s}.csv")
+    for m, rs in res.diagnostics.get("return_surrogate", {}).items():
+        rs.fit.set_index(res.panels[m].dates[rs.fit.index]).to_csv(tables / f"return_surrogate_fit_{m}.csv")
 
     write_risk_report(res, out, charts)
     write_pm_report(res, out, charts)

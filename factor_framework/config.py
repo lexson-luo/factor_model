@@ -139,7 +139,10 @@ TS_FACTOR_DESCRIPTIONS = {
 
 # Medium-priority factors: tested for promotion to the core, otherwise monitored
 CANDIDATE_FACTORS = ("etf_ownership", "retail_attention")
-PROMOTED_CANDIDATES: tuple[str, ...] = ()        # governance decision; empty = monitor only
+# Governance decision; empty = monitor only.  A promoted candidate becomes a core style factor and leaves the
+# add-one test (it is then drop-one tested like the other styles).  Both passed the add-one test in US and CN
+# (marginal R² 0.006-0.010, |t| > 2 on 15-27% of days), comparable to st_momentum / overnight_gap / liquidity.
+PROMOTED_CANDIDATES: tuple[str, ...] = ("etf_ownership", "retail_attention")
 # Slow / traditional factors: monitoring layer only (Section 2.3)
 SLOW_FACTORS = ("value", "earnings_yield", "quality", "momentum_12_1", "long_term_reversal")
 
@@ -148,10 +151,15 @@ CRYPTO_EVENT_FACTORS = ("token_unlock",)
 
 # Fixed, documented orthogonalisation order (Section 3.4): factor -> regress on
 # Crowding is cleaned of size, volatility and liquidity last (Section 2.2, level 1, step 5).
+# Promoted candidates are cleaned of size (raw exposure correlation: ETF ownership about +0.7, retail
+# attention -0.5 to -0.7), so they carry only what size does not imply and size attribution is unchanged.
+# Entries whose factor is not in a market's model are skipped.
 ORTHOGONALISATION = {
     "liquidity": ("size",),
     "volatility": ("beta", "size"),
     "crowding": ("size", "volatility", "liquidity"),
+    "etf_ownership": ("size",),
+    "retail_attention": ("size",),
 }
 CROWDING_INPUTS = ("si_float", "days_to_cover", "borrow_fee", "borrow_scarcity", "utilisation")
 

@@ -4,22 +4,24 @@
 
 ## Key findings
 
+- **A2_CN_STATARB**: linear and SHAP attribution disagree on crowding (daily corr +0.09; linear -0.16m, SHAP -0.85m).
+- **A1_US_STATARB** selects on characteristics outside the core model: theme_tag (XGBoost surrogate out-of-sample R² 0.23; mean |SHAP|).
+- **D1_US_CROWDING** selects on characteristics outside the core model: theme_tag (XGBoost surrogate out-of-sample R² 0.61; mean |SHAP|).
 - US named-model residuals have 7 eigenvalue(s) above the Marchenko-Pastur edge; PC1 is most associated with **theme:AI infrastructure** (corr -0.58). Recommendation: promote it to an explicit core factor through governance.
-- Residual P&L of **A1_US_STATARB** and **D1_US_CROWDING** is correlated (+0.24 named-only, +0.19 with statistical factors): it survives the statistical factors, so it is shared idiosyncratic bets rather than a missing factor (average position cosine overlap +0.12) - the two books are partly the same alpha.
+- Residual P&L of **A1_US_STATARB** and **D1_US_CROWDING** is correlated (+0.24 named-only, +0.18 with statistical factors): it survives the statistical factors, so it is shared idiosyncratic bets rather than a missing factor (average position cosine overlap +0.12) - the two books are partly the same alpha.
 - **E1_CRYPTO_CARRY** is dollar-neutral (net -0.5%) but beta-adjusted net -7.8% of gross.
 - Model release **D1_US_CROWDING v2.0** (2025-06-02) most changed `size` exposure +0.05 -> -0.14 (t=-14.7).
 - Model release **A2_CN_STATARB v2.3** (2025-05-12) most changed `size` exposure +0.00 -> -0.25 (t=-6.4).
 - Model release **C1_US_EVENT v1.4** (2026-01-12) most changed `beta` exposure -0.41 -> -0.18 (t=4.8).
 - Model release **E1_CRYPTO_CARRY v1.6** (2025-12-01) most changed `funding` exposure -0.65 -> -0.44 (t=4.3).
 - Model release **A1_US_STATARB v3.2** (2025-09-15) most changed `beta` exposure -0.07 -> +0.06 (t=3.2).
-- **A1_US_STATARB** is short volatility: a 3-sigma implied-vol shock has historically cost 231k (t=-9.3), while the Gaussian risk model implies +31k - liquidity-provision losses cluster in stress, so shock limits use the worse of the two.
+- **A1_US_STATARB** is short volatility: a 3-sigma implied-vol shock has historically cost 231k (t=-9.3), while the Gaussian risk model implies +32k - liquidity-provision losses cluster in stress, so shock limits use the worse of the two.
 - **D1_US_CROWDING** is short volatility: a 3-sigma implied-vol shock has historically cost 101k (t=-4.4), consistent with the risk model.
 - **B1_US_INTRADAY** looks intraday beta-neutral on concurrent 30-minute betas (-0.015 per $ gross) but carries +0.046 on lag-corrected betas (Epps effect) - hedge with Dimson betas.
 - Internal crowding (US): 177 names are held on the same side by two or more teams (77% of firm gross); exiting together costs 22k more than each team exiting alone.
-- Factor-level crowding (CN): `overnight_gap` comomentum z=2.9 - stress shocks on these factors are scaled up.
-- Factor selection: candidates passing the tests on our data - `etf_ownership` (US), `retail_attention` (US), `etf_ownership` (CN), `retail_attention` (CN); promotion is a governance decision.
-- Factor selection: core factors failing the tests (review for the monitoring layer) - `index_rebalance` (US), `option_expiry` (US), `corporate_action` (US), `index_rebalance` (CN), `option_expiry` (CN), `corporate_action` (CN).
-- **C1_US_EVENT** raw Sharpe 0.78 understates skill: residual Sharpe 2.61 - factor P&L -0.8m is a drag.
+- Factor-level crowding (CN): `overnight_gap` comomentum z=2.5 - stress shocks on these factors are scaled up.
+- Factor selection: core factors failing the tests (review for the monitoring layer) - `index_rebalance` (US), `option_expiry` (US), `corporate_action` (US), `option_expiry` (CN), `corporate_action` (CN), `in_play` (CN).
+- **C1_US_EVENT** raw Sharpe 0.78 understates skill: residual Sharpe 2.66 - factor P&L -0.8m is a drag.
 
 ## Are we paying for alpha or for factor exposure?
 
@@ -27,21 +29,21 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 
 | strategy | team | avg_gmv | total_pnl | sharpe | sharpe_95ci | residual_sharpe | residual_95ci | net_alpha_sharpe | factor_pnl | cost_pnl |
 |---|---|---|---|---|---|---|---|---|---|---|
-| A1_US_STATARB | TEAM_ALPHA | 60.02m | 32.51m | 4.103 | [2.77, 5.43] | 13.569 | [12.04, 15.10] | 7.002 | 8.85m | -7.73m |
-| A2_CN_STATARB | TEAM_ALPHA | 25.03m | 7.34m | 1.685 | [0.35, 3.02] | 10.692 | [9.22, 12.16] | 2.008 | 3.01m | -7.92m |
-| B1_US_INTRADAY | TEAM_BRAVO | 6.01m | 12.22m | 2.969 | [1.65, 4.29] | -0.298 | [-1.61, 1.01] | 3.605 | -1.24m | -41.89m |
-| C1_US_EVENT | TEAM_CHARLIE | 29.21m | 4.47m | 0.779 | [-0.53, 2.09] | 2.615 | [1.30, 3.93] | 1.294 | -0.83m | -1.00m |
-| D1_US_CROWDING | TEAM_DELTA | 50.03m | 14.69m | 2.115 | [0.80, 3.43] | 6.723 | [5.36, 8.09] | 3.911 | 5.00m | -2.89m |
+| A1_US_STATARB | TEAM_ALPHA | 60.02m | 32.51m | 4.103 | [2.77, 5.43] | 13.892 | [12.35, 15.43] | 7.225 | 8.36m | -7.73m |
+| A2_CN_STATARB | TEAM_ALPHA | 25.03m | 7.34m | 1.685 | [0.35, 3.02] | 10.588 | [9.12, 12.06] | 1.824 | 3.41m | -7.92m |
+| B1_US_INTRADAY | TEAM_BRAVO | 6.01m | 12.22m | 2.969 | [1.65, 4.29] | -0.528 | [-1.84, 0.78] | 3.574 | -1.13m | -41.89m |
+| C1_US_EVENT | TEAM_CHARLIE | 29.21m | 4.47m | 0.779 | [-0.53, 2.09] | 2.655 | [1.34, 3.97] | 1.317 | -0.85m | -1.00m |
+| D1_US_CROWDING | TEAM_DELTA | 50.03m | 14.69m | 2.115 | [0.80, 3.43] | 6.744 | [5.38, 8.11] | 3.918 | 5.02m | -2.89m |
 | E1_CRYPTO_CARRY | TEAM_ECHO | 20.03m | 20.68m | 2.020 | [0.73, 3.31] | 7.816 | [6.46, 9.17] | 1.687 | 5.04m | -33.45m |
 
 ### By team
 
 | team | avg_gmv | total_pnl | factor_pnl | cost_pnl |
 |---|---|---|---|---|
-| TEAM_ALPHA | 85.05m | 39.85m | 11.86m | -15.66m |
-| TEAM_BRAVO | 6.01m | 12.22m | -1.24m | -41.89m |
-| TEAM_CHARLIE | 29.21m | 4.47m | -0.83m | -1.00m |
-| TEAM_DELTA | 50.03m | 14.69m | 5.00m | -2.89m |
+| TEAM_ALPHA | 85.05m | 39.85m | 11.77m | -15.66m |
+| TEAM_BRAVO | 6.01m | 12.22m | -1.13m | -41.89m |
+| TEAM_CHARLIE | 29.21m | 4.47m | -0.85m | -1.00m |
+| TEAM_DELTA | 50.03m | 14.69m | 5.02m | -2.89m |
 | TEAM_ECHO | 20.03m | 20.68m | 5.04m | -33.45m |
 
 ## How diversified are we really?
@@ -57,22 +59,22 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 
 | strategy | gross | pred_vol_ann_pct_gmv | factor_risk_share | beta_adj_net_pct |
 |---|---|---|---|---|
-| A1_US_STATARB | 59.27m | 3.8% | 64.2% | 1.5% |
-| A2_CN_STATARB | 24.38m | 7.5% | 74.8% | -4.0% |
-| B1_US_INTRADAY | 5.97m | 9.1% | 80.9% | -1.5% |
-| C1_US_EVENT | 29.70m | 5.5% | 19.3% | -1.6% |
-| D1_US_CROWDING | 49.25m | 6.6% | 85.5% | -1.4% |
+| A1_US_STATARB | 59.27m | 3.8% | 65.5% | 1.5% |
+| A2_CN_STATARB | 24.38m | 7.5% | 75.4% | -4.0% |
+| B1_US_INTRADAY | 5.97m | 9.0% | 81.0% | -1.5% |
+| C1_US_EVENT | 29.70m | 5.6% | 20.5% | -1.6% |
+| D1_US_CROWDING | 49.25m | 6.5% | 85.6% | -1.4% |
 | E1_CRYPTO_CARRY | 20.33m | 26.2% | 71.4% | -7.8% |
 
 ## Firm-level tail risk (hypothetical scenarios on current holdings)
 
 | scenario | firm_pnl_usd | crowding_scaled_usd |
 |---|---|---|
-| Aug-2007 quant deleveraging | -4.87m | -5.20m |
-| Jan-2021 short squeeze | -1.38m | -1.67m |
-| Mar-2020 COVID crash | -0.47m | -0.55m |
-| Aug-2024 carry unwind | -0.25m | -0.32m |
+| Aug-2007 quant deleveraging | -4.75m | -5.05m |
+| Jan-2021 short squeeze | -1.31m | -1.58m |
+| Mar-2020 COVID crash | -0.46m | -0.54m |
+| Aug-2024 carry unwind | -0.24m | -0.30m |
 | Rates shock / hawkish surprise | -0.13m | -0.13m |
-| Nov-2020 momentum/value rotation | 0.71m | 0.76m |
-| Nov-2022 FTX failure | 1.08m | 1.08m |
-| May-2022 LUNA collapse | 2.41m | 2.41m |
+| Nov-2020 momentum/value rotation | 0.70m | 0.75m |
+| Nov-2022 FTX failure | 1.07m | 1.07m |
+| May-2022 LUNA collapse | 2.39m | 2.39m |
