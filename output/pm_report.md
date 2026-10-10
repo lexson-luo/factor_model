@@ -13,6 +13,7 @@ Short-window attribution (20 days) is noisy - read it alongside the since-incept
 | factor | 8.36m | 1.03m |
 | slow_factor | 1.12m | 44,405 |
 | specific | 41.50m | 1.34m |
+| basis | 0 | 0 |
 | fx | 0 | 0 |
 | trading | -9.72m | 0.82m |
 | delay_cost | 5.04m | -0.81m |
@@ -39,11 +40,11 @@ Short-window attribution (20 days) is noisy - read it alongside the since-incept
 
 **Execution costs:** 3.61 bps of 21.4bn traded (delay -2.35, impact 5.32, fees 0.64 bps).
 
-**Intraday decomposition (last 60 days, 30-minute bars)**
+**Intraday decomposition (last 60 days, 30-minute bars)**[^intraday-factors]
 
 | overnight_futures | overnight_factor | overnight_residual | intraday_futures | intraday_factor | intraday_order_flow | intraday_residual | within_bar_trading | intraday_total | daily_mtm | reconciliation_diff |
 |---|---|---|---|---|---|---|---|---|---|---|
-| -8,539 | 1.04m | 1.13m | 51,610 | 1.36m | 1.93m | 1.26m | -1.42m | 5.35m | 5.35m | 0 |
+| -8,539 | 1.04m | 1.13m | 30,817 | 1.39m | 1.93m | 1.26m | -1.42m | 5.35m | 5.35m | 0 |
 
 Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures market factor (intraday beta); order flow = imbalance factor (attribution only).
 
@@ -144,6 +145,7 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 | factor | 3.41m | -77,416 |
 | slow_factor | 0.86m | 23,128 |
 | specific | 21.00m | 0.65m |
+| basis | 0 | 0 |
 | fx | -7,610 | -6,005 |
 | trading | -7.06m | -0.19m |
 | delay_cost | 2.82m | 0.14m |
@@ -265,6 +267,7 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 | factor | -1.13m | -23,111 |
 | slow_factor | 50,088 | -4,567 |
 | specific | -0.32m | -0.10m |
+| basis | 0 | 0 |
 | fx | 0 | 0 |
 | trading | 55.65m | 1.44m |
 | delay_cost | -0.71m | -53,836 |
@@ -291,11 +294,11 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 
 **Execution costs:** 9.59 bps of 43.7bn traded (delay 0.16, impact 8.79, fees 0.64 bps).
 
-**Intraday decomposition (last 60 days, 30-minute bars)**
+**Intraday decomposition (last 60 days, 30-minute bars)**[^intraday-factors]
 
 | overnight_futures | overnight_factor | overnight_residual | intraday_futures | intraday_factor | intraday_order_flow | intraday_residual | within_bar_trading | intraday_total | daily_mtm | reconciliation_diff |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 16,618 | -0.14m | -5,853 | -28,578 | -4.39m | 6.44m | 2.85m | -3.37m | 1.37m | 1.37m | -0 |
+| 16,618 | -0.14m | -5,853 | -10,417 | -4.40m | 6.44m | 2.84m | -3.37m | 1.37m | 1.37m | -0 |
 
 Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures market factor (intraday beta); order flow = imbalance factor (attribution only).
 
@@ -340,6 +343,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 | factor | -0.85m | 0.50m |
 | slow_factor | -0.18m | -79,237 |
 | specific | 11.11m | -0.47m |
+| basis | 0 | 0 |
 | fx | 0 | 0 |
 | trading | -4.02m | -16,332 |
 | delay_cost | 1.06m | 16,908 |
@@ -366,11 +370,11 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 **Execution costs:** 2.87 bps of 3.5bn traded (delay -3.02, impact 5.25, fees 0.64 bps).
 
-**Intraday decomposition (last 60 days, 30-minute bars)**
+**Intraday decomposition (last 60 days, 30-minute bars)**[^intraday-factors]
 
 | overnight_futures | overnight_factor | overnight_residual | intraday_futures | intraday_factor | intraday_order_flow | intraday_residual | within_bar_trading | intraday_total | daily_mtm | reconciliation_diff |
 |---|---|---|---|---|---|---|---|---|---|---|
-| -26,896 | 0.10m | -0.59m | -26,058 | 0.40m | 0.49m | -65,645 | -0.27m | 8,269 | 8,269 | 0 |
+| -26,896 | 0.10m | -0.59m | -28,274 | 0.40m | 0.49m | -67,185 | -0.27m | 8,269 | 8,269 | 0 |
 
 Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures market factor (intraday beta); order flow = imbalance factor (attribution only).
 
@@ -473,6 +477,7 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 | factor | 5.02m | 0.89m |
 | slow_factor | 0.22m | 25,812 |
 | specific | 16.27m | 0.55m |
+| basis | 0 | 0 |
 | fx | 0 | 0 |
 | trading | -1.78m | -0.10m |
 | delay_cost | 0.65m | 6,890 |
@@ -499,11 +504,11 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 
 **Execution costs:** 4.60 bps of 6.3bn traded (delay -1.04, impact 4.99, fees 0.64 bps).
 
-**Intraday decomposition (last 60 days, 30-minute bars)**
+**Intraday decomposition (last 60 days, 30-minute bars)**[^intraday-factors]
 
 | overnight_futures | overnight_factor | overnight_residual | intraday_futures | intraday_factor | intraday_order_flow | intraday_residual | within_bar_trading | intraday_total | daily_mtm | reconciliation_diff |
 |---|---|---|---|---|---|---|---|---|---|---|
-| -19,399 | 0.40m | 0.46m | -35,938 | 1.31m | 0.48m | 0.45m | -0.27m | 2.79m | 2.79m | 0 |
+| -19,399 | 0.40m | 0.46m | -40,505 | 1.31m | 0.48m | 0.45m | -0.27m | 2.79m | 2.79m | 0 |
 
 Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures market factor (intraday beta); order flow = imbalance factor (attribution only).
 
@@ -603,7 +608,8 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 |---|---|---|
 | factor | 5.04m | -0.24m |
 | slow_factor | 0 | 0 |
-| specific | 70.96m | 1.35m |
+| specific | 68.47m | 1.30m |
+| basis | 2.49m | 45,787 |
 | fx | 0 | 0 |
 | trading | -23.56m | -0.94m |
 | delay_cost | 13.97m | 1.06m |
@@ -658,3 +664,152 @@ Holdings-based exposures vs a rolling regression of strategy returns on factor r
 | market | -0.043 | -0.002 |
 | st_reversal | -0.157 | -0.195 |
 | volatility | 0.182 | 0.070 |
+
+## Appendix A: intraday factor P&L by factor
+
+Split of `overnight_factor` and `intraday_factor` from the intraday decomposition, summed over the last 60 days of 30-minute bars. Factor returns are re-estimated bar by bar on the daily exposures, so these are not the daily factor P&L figures. Index futures and order flow are separate buckets and are not shown. Factors with no P&L are omitted. Daily rows: `tables/intraday_factor_attribution.csv`.
+
+### A1_US_STATARB
+
+| factor | group | overnight_pnl | intraday_pnl | total_pnl |
+|---|---|---|---|---|
+| st_reversal | style | 1.71m | 0.78m | 2.49m |
+| crypto_beta | market_specific | -0.32m | -87,568 | -0.41m |
+| size | style | -25,703 | 0.25m | 0.23m |
+| ind_Semiconductors | industry | 85,693 | 0.10m | 0.19m |
+| ind_Industrials | industry | -0.10m | -68,308 | -0.17m |
+| crowding | style | 50,184 | 0.12m | 0.17m |
+| liquidity | style | 72,724 | 64,168 | 0.14m |
+| etf_ownership | style | -58,451 | -45,408 | -0.10m |
+| st_momentum | style | -0.22m | 0.13m | -92,297 |
+| beta | style | 26,503 | 65,539 | 92,041 |
+| stat_2 | statistical | -64,377 | -18,420 | -82,797 |
+| ind_Utilities | industry | 40,708 | 35,560 | 76,268 |
+| ind_Energy | industry | -38,712 | -32,857 | -71,569 |
+| earnings | event | 55,652 | 623 | 56,275 |
+| market | market | -1,975 | -51,543 | -53,518 |
+| ind_Consumer Discretionary | industry | -6,933 | -30,907 | -37,839 |
+| ind_Health Care | industry | -26,990 | 54,407 | 27,418 |
+| retail_attention | style | 13,740 | 11,932 | 25,672 |
+| ind_Consumer Staples | industry | -15,540 | -9,308 | -24,848 |
+| ind_Materials | industry | 41,663 | -18,763 | 22,900 |
+| stat_1 | statistical | -8,316 | -11,967 | -20,283 |
+| option_expiry | event | -1,597 | -18,571 | -20,168 |
+| ind_Communication | industry | -7,430 | -12,143 | -19,573 |
+| volatility | style | -67,827 | 81,155 | 13,329 |
+| overnight_gap | style | -93,204 | 98,616 | 5,411 |
+| in_play | event | 5,107 | -1,756 | 3,351 |
+| ind_Technology | industry | -21,517 | 19,353 | -2,164 |
+| corporate_action | event | 2,625 | -719 | 1,906 |
+| index_rebalance | event | 643 | 323 | 966 |
+| ind_Financials | industry | 23,502 | -23,630 | -128 |
+| TOTAL |  | 1.04m | 1.39m | 2.43m |
+
+### B1_US_INTRADAY
+
+| factor | group | overnight_pnl | intraday_pnl | total_pnl |
+|---|---|---|---|---|
+| crypto_beta | market_specific | -61,146 | -0.73m | -0.79m |
+| size | style | -89,887 | -0.67m | -0.76m |
+| volatility | style | 3,106 | -0.39m | -0.39m |
+| st_reversal | style | -26,868 | -0.30m | -0.33m |
+| ind_Energy | industry | -16,049 | -0.30m | -0.32m |
+| ind_Communication | industry | -6,861 | -0.30m | -0.30m |
+| ind_Utilities | industry | 1,247 | -0.30m | -0.30m |
+| ind_Financials | industry | 883 | -0.22m | -0.22m |
+| stat_1 | statistical | 13,592 | -0.21m | -0.20m |
+| ind_Health Care | industry | -13,617 | -0.18m | -0.19m |
+| ind_Technology | industry | 9,587 | -0.19m | -0.18m |
+| crowding | style | -15,893 | -0.10m | -0.12m |
+| beta | style | 24,541 | 94,768 | 0.12m |
+| liquidity | style | 1,315 | -0.11m | -0.11m |
+| ind_Industrials | industry | 153 | -0.11m | -0.11m |
+| ind_Consumer Discretionary | industry | -5,086 | -85,795 | -90,881 |
+| st_momentum | style | 27,360 | -83,919 | -56,559 |
+| option_expiry | event | -3,929 | -51,480 | -55,409 |
+| market | market | -2,200 | -41,545 | -43,744 |
+| ind_Materials | industry | -4,397 | -37,514 | -41,911 |
+| overnight_gap | style | -4,389 | 38,025 | 33,636 |
+| stat_2 | statistical | 2,877 | -34,120 | -31,242 |
+| retail_attention | style | 7,340 | -35,307 | -27,967 |
+| ind_Semiconductors | industry | 7,795 | -29,367 | -21,571 |
+| earnings | event | -1,925 | -12,430 | -14,354 |
+| ind_Consumer Staples | industry | 6,512 | -11,574 | -5,063 |
+| in_play | event | -4,862 | 256 | -4,605 |
+| corporate_action | event | -619 | -1,460 | -2,079 |
+| index_rebalance | event | 0 | 579 | 579 |
+| etf_ownership | style | 7,919 | -7,551 | 368 |
+| TOTAL |  | -0.14m | -4.40m | -4.55m |
+
+### C1_US_EVENT
+
+| factor | group | overnight_pnl | intraday_pnl | total_pnl |
+|---|---|---|---|---|
+| overnight_gap | style | -0.22m | -0.14m | -0.37m |
+| st_momentum | style | 0.12m | 0.16m | 0.27m |
+| size | style | 0.12m | 58,071 | 0.18m |
+| ind_Communication | industry | -50,277 | -82,651 | -0.13m |
+| crypto_beta | market_specific | 87,040 | 37,621 | 0.12m |
+| ind_Semiconductors | industry | 92,387 | 16,280 | 0.11m |
+| retail_attention | style | 17,824 | 75,184 | 93,008 |
+| ind_Utilities | industry | 49,263 | 31,828 | 81,091 |
+| ind_Energy | industry | 52,386 | 19,659 | 72,045 |
+| ind_Consumer Discretionary | industry | 25,609 | 45,939 | 71,548 |
+| beta | style | 79,021 | -12,420 | 66,601 |
+| crowding | style | -28,686 | -34,340 | -63,026 |
+| ind_Health Care | industry | -16,760 | -37,073 | -53,833 |
+| option_expiry | event | 32,741 | 16,615 | 49,356 |
+| ind_Technology | industry | -18,168 | -27,801 | -45,970 |
+| ind_Industrials | industry | -23,331 | -16,167 | -39,498 |
+| etf_ownership | style | -31,511 | -5,866 | -37,377 |
+| stat_1 | statistical | 3,593 | 33,379 | 36,972 |
+| in_play | event | 25,664 | 11,104 | 36,768 |
+| ind_Materials | industry | 1,160 | 34,673 | 35,833 |
+| liquidity | style | 46,301 | -12,213 | 34,089 |
+| market | market | -1,851 | -26,224 | -28,075 |
+| ind_Financials | industry | -20,624 | -6,791 | -27,416 |
+| st_reversal | style | -0.29m | 0.32m | 24,889 |
+| stat_2 | statistical | 38,778 | -24,366 | 14,412 |
+| ind_Consumer Staples | industry | 5,343 | -15,980 | -10,637 |
+| corporate_action | event | 4,194 | 3,988 | 8,181 |
+| index_rebalance | event | -1,016 | -133 | -1,148 |
+| volatility | style | 13,364 | -12,677 | 687 |
+| TOTAL |  | 0.10m | 0.40m | 0.50m |
+
+### D1_US_CROWDING
+
+| factor | group | overnight_pnl | intraday_pnl | total_pnl |
+|---|---|---|---|---|
+| crypto_beta | market_specific | 0.72m | 0.67m | 1.39m |
+| size | style | -0.36m | -0.10m | -0.46m |
+| volatility | style | 44,932 | 0.36m | 0.40m |
+| st_momentum | style | 23,609 | 0.33m | 0.35m |
+| ind_Communication | industry | -0.10m | -0.12m | -0.23m |
+| st_reversal | style | -56,737 | -0.16m | -0.22m |
+| ind_Technology | industry | 0.11m | 76,646 | 0.19m |
+| crowding | style | -19,450 | 0.21m | 0.19m |
+| beta | style | 0.15m | 24,655 | 0.17m |
+| ind_Industrials | industry | -38,435 | -67,444 | -0.11m |
+| ind_Energy | industry | 55,903 | 33,144 | 89,048 |
+| ind_Utilities | industry | -34,382 | -42,433 | -76,816 |
+| etf_ownership | style | 32,608 | 41,819 | 74,428 |
+| option_expiry | event | -24,160 | -32,158 | -56,318 |
+| ind_Semiconductors | industry | 32,338 | 23,882 | 56,220 |
+| ind_Financials | industry | -9,614 | -29,458 | -39,072 |
+| stat_2 | statistical | -29,462 | 207 | -29,255 |
+| ind_Consumer Staples | industry | 9,662 | 19,431 | 29,093 |
+| overnight_gap | style | -75,821 | 0.10m | 28,071 |
+| earnings | event | -20,625 | -6,089 | -26,714 |
+| ind_Materials | industry | 2,680 | -21,710 | -19,030 |
+| ind_Consumer Discretionary | industry | -2,389 | -14,030 | -16,419 |
+| stat_1 | statistical | 8,975 | 1,701 | 10,675 |
+| ind_Health Care | industry | -1,179 | 9,499 | 8,320 |
+| corporate_action | event | -2,101 | -3,013 | -5,114 |
+| market | market | -1,694 | 5,412 | 3,718 |
+| liquidity | style | -14,075 | 17,669 | 3,595 |
+| retail_attention | style | 2,077 | -4,448 | -2,371 |
+| in_play | event | 535 | -1,495 | -960 |
+| index_rebalance | event | 627 | 34 | 661 |
+| TOTAL |  | 0.40m | 1.31m | 1.71m |
+
+[^intraday-factors]: `overnight_factor` and `intraday_factor` broken down by factor in Appendix A (daily rows in `tables/intraday_factor_attribution.csv`).

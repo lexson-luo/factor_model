@@ -79,7 +79,8 @@ def test_end_to_end_attribution_reconciles_and_is_additive():
     att = PnLAttributor({"CRYPTO": cp}, {"CRYPTO": fm}, td).run(["E1_CRYPTO_CARRY"])
     d = att.daily
     assert np.allclose(d[COMPONENTS].sum(axis=1), d.total_attributed)
-    assert np.allclose(d.factor + d.slow_factor + d.specific, d.hold_pnl)
+    assert np.allclose(d.factor + d.slow_factor + d.specific + d.basis, d.hold_pnl)
+    assert d.basis.abs().sum() > 0                  # perp marks differ from the spot the model is estimated on
     rec = reconciliation(d)
     assert (~rec["break"]).mean() > 0.99
 

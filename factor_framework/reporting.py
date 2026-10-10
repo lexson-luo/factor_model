@@ -107,6 +107,7 @@ def chart_cum_attribution(daily: pd.DataFrame, strategy: str, path: Path):
         "Factor": d.factor, "Residual (specific + slow)": d.specific + d.slow_factor,
         "Trading at decision": d.trading, "Execution costs": d.delay_cost + d.impact_cost + d.commissions,
         "Financing, borrow, funding": d.financing + d.borrow + d.funding, "FX": d.fx,
+        "Basis (perp vs spot)": d.basis,
     }
     fig, ax = plt.subplots(figsize=(8, 3.8))
     for i, (k, v) in enumerate(groups.items()):
@@ -397,6 +398,34 @@ def _shap_attribution_section(sa: dict) -> list[str]:
     return lines
 
 
+def intraday_factor_detail(res) -> pd.DataFrame:
+    """Per-factor split of the intraday buckets `overnight_factor` and `intraday_factor`, one row per
+    (date, strategy, factor).  Index futures and order flow are separate buckets and not included."""
+    fd = res.intraday.factor_detail
+    groups = res.models["US"].expo.groups          # the intraday layer runs on the US model
+    return fd.assign(group=fd.factor.map(groups), total_pnl=fd.overnight_pnl + fd.intraday_pnl)
+
+
+def _intraday_factor_appendix(res) -> list[str]:
+    """PM-report appendix: intraday factor P&L by factor and strategy (USD over the intraday window)."""
+    if res.intraday is None or not len(res.intraday.factor_detail):
+        return []
+    fd = intraday_factor_detail(res)
+    cols = ["overnight_pnl", "intraday_pnl", "total_pnl"]
+    lines = ["## Appendix A: intraday factor P&L by factor", "",
+             f"Split of `overnight_factor` and `intraday_factor` from the intraday decomposition, summed over the last "
+             f"{fd.date.nunique()} days of 30-minute bars. Factor returns are re-estimated bar by bar on the daily "
+             "exposures, so these are not the daily factor P&L figures. Index futures and order flow are separate "
+             "buckets and are not shown. Factors with no P&L are omitted. Daily rows: "
+             "`tables/intraday_factor_attribution.csv`.", ""]
+    for s, g in fd.groupby("strategy", sort=False):
+        t = g.groupby("factor", sort=False).agg(group=("group", "first"), **{c: (c, "sum") for c in cols})
+        t = t[t[cols].abs().sum(axis=1) > 0].sort_values("total_pnl", key=np.abs, ascending=False)
+        t.loc["TOTAL"] = ["", *t[cols].sum()]
+        lines += [f"### {s}", "", md_table(t, {c: "usd" for c in cols}, index=True), ""]
+    return lines
+
+
 def _findings(res, score: pd.DataFrame, lat: pd.DataFrame) -> list[str]:
     out = []
     D = res.diagnostics
@@ -660,7 +689,7 @@ def write_pm_report(res, out: Path, charts: Path) -> str:
                   f"fees {costs.iloc[2] / traded * 1e4:.2f} bps).", ""]
         if res.intraday is not None and s in res.intraday.attribution.index.get_level_values(1):
             ia = res.intraday.attribution.xs(s, level="strategy")
-            lines += [f"**Intraday decomposition (last {len(ia)} days, 30-minute bars)**", "",
+            lines += [f"**Intraday decomposition (last {len(ia)} days, 30-minute bars)**[^intraday-factors]", "",
                       md_table(ia.sum().to_frame("usd").T, {c: "usd" for c in ia.columns}), "",
                       f"Intraday vs daily reconciliation: max |diff| ${ia.reconciliation_diff.abs().max():,.0f} per day. "
                       "Futures = index-futures market factor (intraday beta); order flow = imbalance factor "
@@ -706,6 +735,11 @@ def write_pm_report(res, out: Path, charts: Path) -> str:
                   "Holdings-based exposures vs a rolling regression of strategy returns on factor returns (Sharpe 1992). "
                   "Agreement in sign confirms the holdings pipeline; the returns-based estimates are noisier and lag.", "",
                   md_table(agg, index=True), ""]
+    appendix = _intraday_factor_appendix(res)
+    if appendix:
+        lines += appendix
+        lines += ["[^intraday-factors]: `overnight_factor` and `intraday_factor` broken down by factor in "
+                  "Appendix A (daily rows in `tables/intraday_factor_attribution.csv`).", ""]
     txt = "\n".join(lines)
     (out / "pm_report.md").write_text(txt, encoding="utf-8", newline="\n")
     return txt
@@ -829,9 +863,11 @@ def write_validation_report(res, out: Path) -> str:
         if len(b):
             lines += ["### Asynchronous trading (Epps effect)", "",
                       f"Average stock beta to index futures: daily {b.daily_beta.mean():.2f}, concurrent 30-minute "
-                      f"{b.concurrent_30m.mean():.2f}, lag-corrected (Dimson) {b.dimson_30m.mean():.2f}. Concurrent "
-                      "intraday betas are biased toward zero; intraday exposures use Dimson betas shrunk toward the "
-                      "daily beta.", ""]
+                      f"{b.concurrent_30m.mean():.2f}, lag-corrected (Dimson) {b.dimson_30m.mean():.2f} "
+                      f"(same bar {b.dimson_b0_30m.mean():.2f} + next bar {b.dimson_b1_30m.mean():.2f}). Concurrent "
+                      "intraday betas are biased toward zero. Intraday exposures use the two Dimson parts separately: "
+                      "the same-bar part shrunk toward the daily beta and the next-bar part toward zero, so each bar "
+                      "removes the futures response that actually lands in it.", ""]
         if len(I.macro_bars):
             lines += ["### Macro announcement bars", "", md_table(I.macro_bars), ""]
     rec = res.recon
@@ -927,6 +963,7 @@ def write_all(res, out: Path) -> None:
     strategy_scorecard(res).to_csv(tables / "strategy_scorecard.csv", index=False)
     if res.intraday is not None:
         res.intraday.attribution.to_csv(tables / "intraday_attribution.csv")
+        intraday_factor_detail(res).to_csv(tables / "intraday_factor_attribution.csv", index=False)
         res.intraday.betas.to_csv(tables / "intraday_betas.csv")
         res.intraday.seasonality_bias.to_csv(tables / "intraday_seasonality_bias.csv", index=False)
         res.intraday.macro_bars.to_csv(tables / "intraday_macro_bars.csv", index=False)

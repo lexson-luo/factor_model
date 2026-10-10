@@ -6,7 +6,9 @@ Uses 30-minute bars to
   cash market and are the hedging instrument); each stock's exposure is its
   intraday beta, estimated with a lagged (Dimson) correction because concurrent
   30-minute betas are biased toward zero (Epps effect), shrunk toward the daily
-  beta;
+  beta; the same-bar and lagged responses are kept apart, so each bar removes
+  b0 * futures(bar) + b1 * futures(previous bar) and the lagged response is
+  attributed to the bar in which the stock actually moves;
 * estimate bar-level returns of the cross-sectional factors with the daily
   exposures X_t (overnight gap / opening auction = bar 0);
 * add order-flow imbalance (buy minus sell volume) as an attribution-only factor -
@@ -38,7 +40,7 @@ class IntradayResult:
     attribution: pd.DataFrame             # per (date, strategy)
     factor_detail: pd.DataFrame           # per (date, strategy, factor) intraday factor P&L
     r2: pd.Series
-    betas: pd.DataFrame = field(default_factory=pd.DataFrame)          # daily / concurrent / Dimson / used
+    betas: pd.DataFrame = field(default_factory=pd.DataFrame)          # daily / concurrent / Dimson (b0, b1) / used
     epps_books: pd.DataFrame = field(default_factory=pd.DataFrame)     # strategy intraday beta by method
     seasonality_bias: pd.DataFrame = field(default_factory=pd.DataFrame)
     macro_bars: pd.DataFrame = field(default_factory=pd.DataFrame)
@@ -85,11 +87,14 @@ class IntradayModel:
 
     def _intraday_betas(self, rb: np.ndarray, fb: np.ndarray):
         """Expanding-window concurrent and Dimson (lag 0 + lag 1) betas to futures bar returns,
-        using only previous days; shrunk toward the daily predicted beta."""
+        using only previous days.  The Dimson coefficients are kept apart: the same-bar response
+        b0 is shrunk toward the daily predicted beta and the lagged response b1 toward 0, so the
+        total used beta is s * (b0 + b1) + (1 - s) * daily."""
         D, N, B = rb.shape
-        lag = np.concatenate([np.zeros((D, 1)), fb[:, :-1]], 1)
+        lag = self._lag(fb)
         daily = self.fm.expo.beta_pred.reindex(index=self.dates, columns=self.p.tickers).fillna(1.0).values
-        conc = np.full((D, N), np.nan); dims = np.full((D, N), np.nan); used = daily.copy()
+        conc = np.full((D, N), np.nan); dim0 = np.full((D, N), np.nan); dim1 = np.full((D, N), np.nan)
+        used0, used1 = daily.copy(), np.zeros((D, N))
         S00 = S01 = S11 = 0.0
         S0y = np.zeros(N); S1y = np.zeros(N)
         s = self.cfg.intraday_beta_shrink
@@ -99,12 +104,18 @@ class IntradayModel:
                 det = S00 * S11 - S01 ** 2
                 b0 = (S11 * S0y - S01 * S1y) / det
                 b1 = (S00 * S1y - S01 * S0y) / det
-                conc[d], dims[d] = b_c, b0 + b1
-                used[d] = s * dims[d] + (1 - s) * daily[d]
+                conc[d], dim0[d], dim1[d] = b_c, b0, b1
+                used0[d] = s * b0 + (1 - s) * daily[d]
+                used1[d] = s * b1
             y = np.nan_to_num(rb[d])
             S00 += fb[d] @ fb[d]; S01 += fb[d] @ lag[d]; S11 += lag[d] @ lag[d]
             S0y += y @ fb[d]; S1y += y @ lag[d]
-        return conc, dims, used, daily
+        return conc, dim0, dim1, used0, used1, daily
+
+    @staticmethod
+    def _lag(fb: np.ndarray) -> np.ndarray:
+        """Previous bar's futures return within the same day (bar 1 has no lag; the overnight move is bar 0)."""
+        return np.concatenate([np.zeros((fb.shape[0], 1)), fb[:, :-1]], 1)
 
     def estimate(self):
         e = self.fm.expo
@@ -116,8 +127,11 @@ class IntradayModel:
         rb = c / o - 1
         fb, f_on = self._futures()
         self.fb, self.f_on = fb, f_on
-        conc, dims, used, daily = self._intraday_betas(rb, fb)
-        self.beta_used, self.beta_daily, self.beta_conc, self.beta_dims = used, daily, conc, dims
+        conc, dim0, dim1, used0, used1, daily = self._intraday_betas(rb, fb)
+        self.beta_daily, self.beta_conc = daily, conc
+        self.beta_dim0, self.beta_dim1, self.beta_dims = dim0, dim1, dim0 + dim1
+        self.beta_used0, self.beta_used1, self.beta_used = used0, used1, used0 + used1
+        self.fb_lag = self._lag(fb)
         ofi = (buy - sell) / (buy + sell)
         D, N = len(self.dates), len(self.p.tickers)
         ron = self.p.ret_on.reindex(self.dates).values
@@ -133,8 +147,8 @@ class IntradayModel:
             X0 = e.X[t][:, kidx]
             W = np.nan_to_num(e.reg_weight.values[t]); C = np.nan_to_num(e.cap.values[t]); E = e.estu.values[t]
             for b in range(self.nb + 1):
-                beta = daily[d] if b == 0 else used[d]
-                y = Rall[d, :, b] - beta * Fall[d, b]                 # remove the observed futures move
+                move = daily[d] * f_on[d] if b == 0 else self._futures_move(d, b)
+                y = Rall[d, :, b] - move                              # remove the observed futures move
                 if b > 0:
                     z = ofi[d, :, b - 1]
                     m = E & np.isfinite(z)
@@ -165,9 +179,16 @@ class IntradayModel:
         r = self.p.ret.iloc[-250:].values; ro = self.p.ret_on.iloc[-250:].values
         self.session_share = float(1 - np.nanmean(ro ** 2) / np.nanmean(r ** 2))
         prof = pd.Series(np.nanmean(np.abs(rb), axis=(0, 1)), index=range(1, self.nb + 1), name="mean_abs_bar_return")
-        betas = pd.DataFrame({"daily_beta": daily[-1], "concurrent_30m": conc[-1], "dimson_30m": dims[-1],
-                              "intraday_used": used[-1]}, index=self.p.tickers)
+        betas = pd.DataFrame({"daily_beta": daily[-1], "concurrent_30m": conc[-1], "dimson_30m": dim0[-1] + dim1[-1],
+                              "dimson_b0_30m": dim0[-1], "dimson_b1_30m": dim1[-1],
+                              "intraday_used": used0[-1] + used1[-1], "intraday_used_b0": used0[-1],
+                              "intraday_used_b1": used1[-1]}, index=self.p.tickers)
         return bfr, prof, pd.Series(dict(r2)), betas
+
+    def _futures_move(self, d: int, b: int) -> np.ndarray:
+        """Per-stock return explained by the futures in session bar b (1..nb): same-bar response
+        b0 * futures(b) plus lagged response b1 * futures(b-1)."""
+        return self.beta_used0[d] * self.fb[d, b - 1] + self.beta_used1[d] * self.fb_lag[d, b - 1]
 
     # ---------------- macro release bars ---------------- #
     def macro_bar_stats(self) -> pd.DataFrame:
@@ -228,7 +249,7 @@ class IntradayModel:
                     pnl_b = np.sum(cum * (cb - ob))
                     id_tot += pnl_b
                     fbk = np.nan_to_num(self.F[d, b])
-                    id_fut += np.sum(hb * self.beta_used[d]) * self.fb[d, b - 1]
+                    id_fut += np.sum(hb * self._futures_move(d, b))
                     id_fac_k += (X.T @ hb) * fbk[:-1]
                     id_of += np.sum(hb * self.OFz[d, :, b]) * fbk[-1]
                     if rm is not None and np.abs(hb).sum() > 0 and np.isfinite(rm.F[t]).all():

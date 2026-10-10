@@ -136,7 +136,8 @@ def explained_share(att: AttributionResult) -> pd.DataFrame:
     rows = []
     for s, g in d.groupby(level="strategy"):
         hold = g.hold_pnl
-        rows.append({"strategy": s, "factor_share_of_hold_var": 1 - g.specific.var() / hold.var() if hold.var() > 0 else np.nan,
+        unexplained = g.specific + g.basis
+        rows.append({"strategy": s, "factor_share_of_hold_var": 1 - unexplained.var() / hold.var() if hold.var() > 0 else np.nan,
                      "corr_factor_vs_hold": g.factor.corr(hold)})
     return pd.DataFrame(rows)
 

@@ -38,7 +38,7 @@ market, candidates, orthogonalisation order, half-lives, limits and scenarios.
 
 | PDF section | Implementation |
 |---|---|
-| 2.2 Market / beta (index futures intraday) | `intraday.IntradayModel` – futures bar returns as the observed market factor; Dimson betas shrunk toward daily beta |
+| 2.2 Market / beta (index futures intraday) | `intraday.IntradayModel` – futures bar returns as the observed market factor; Dimson betas kept as same-bar and next-bar parts (b0 shrunk toward daily beta, b1 toward 0), each bar removing b0·futures(b) + b1·futures(b−1) |
 | 2.2 Liquidity incl. relative tick size | `exposures.py` `liq_tick` component; generator floors spreads at one tick |
 | 2.2 Short-side crowding (level 1) | `exposures.py`: five inputs lagged to publication, log/winsorised, standardised within market, averaged over available inputs (missing → 0), cleaned of size/volatility/liquidity in fixed order (`config.ORTHOGONALISATION`); squeeze-day check in `validation.factor_selection` |
 | 2.2 Factor-level crowding (level 2) | `diagnostics.factor_crowding`; drives alerts and `stress.hypothetical_scenarios(..., crowding_mult)` |

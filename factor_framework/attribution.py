@@ -7,6 +7,10 @@
 * Factor P&L     : start-of-day exposures (X_t^T h_{t-1}) times factor returns.
 * Residual P&L   : holdings times specific returns; split further into the
                    slow-factor (monitoring layer) part and remaining specific.
+* Basis P&L      : gap between the return the book earns and the return the
+                   factor model is estimated on (crypto: primary-venue perp
+                   marks vs venue-A spot, i.e. basis and venue moves; zero for
+                   equities).
 * FX P&L         : currency move on local-currency holdings.
 * Trading P&L    : fills marked from the *decision* price to the close, i.e. the
                    P&L of trades executed at the price when the decision was made.
@@ -27,7 +31,7 @@ import pandas as pd
 from .data_loader import CryptoPanel, EquityPanel, TradingData
 from .estimation import FactorModel
 
-COMPONENTS = ["factor", "slow_factor", "specific", "fx", "trading", "delay_cost", "impact_cost",
+COMPONENTS = ["factor", "slow_factor", "specific", "basis", "fx", "trading", "delay_cost", "impact_cost",
               "commissions", "financing", "borrow", "funding"]
 
 
@@ -43,6 +47,7 @@ class StrategyBook:
     ret: pd.DataFrame             # local return used for P&L
     usd: pd.Series                # USD per local unit
     mark: pd.DataFrame            # local close used to mark trades
+    model_ret: pd.DataFrame       # return the factor model is estimated on (crypto: venue-A spot)
 
 
 @dataclass
@@ -74,7 +79,7 @@ class PnLAttributor:
             h = prev * p.close.shift(1).fillna(0) * p.usd_per_local.shift(1).values[:, None]
             ret = p.ret.fillna(0.0)
             return StrategyBook(strategy, mkt, p.dates, p.tickers, sh, h.fillna(0.0), ret, p.usd_per_local,
-                                p.close)
+                                p.close, ret)
         assert isinstance(p, CryptoPanel)
         sh = self.td.positions_wide(strategy, p.dates, p.symbols)
         venue = p.ref["primary_venue"]
@@ -82,7 +87,10 @@ class PnLAttributor:
         prev = sh.shift(1).fillna(0.0)
         h = prev * mark.shift(1).fillna(0)
         ret = mark.pct_change().fillna(0.0)
-        return StrategyBook(strategy, mkt, p.dates, p.symbols, sh, h, ret, pd.Series(1.0, index=p.dates), mark)
+        # the model is estimated on venue-A spot; where spot is missing, fall back to the book return
+        model_ret = p.ret.reindex(index=p.dates, columns=p.symbols).where(lambda x: x.notna(), ret)
+        return StrategyBook(strategy, mkt, p.dates, p.symbols, sh, h, ret, pd.Series(1.0, index=p.dates), mark,
+                            model_ret)
 
     # ---------------- attribution ---------------- #
     def attribute(self, strategy: str):
@@ -108,7 +116,8 @@ class PnLAttributor:
             slow = (xs * np.nan_to_num(fm.slow_returns.values)).sum(axis=1)
         else:
             xs, slow = None, np.zeros(len(b.dates))
-        specific = residual - slow
+        basis = (h * (r - b.model_ret.values)).sum(axis=1)       # book return vs model return
+        specific = residual - slow - basis
         # holdings in currency -> FX applied after local return, expressed in USD at t
         fx_usd = fx
 
@@ -133,7 +142,7 @@ class PnLAttributor:
         off = self.td.official_pnl[self.td.official_pnl.strategy == strategy].set_index("date").reindex(b.dates)
 
         df = pd.DataFrame({
-            "factor": factor, "slow_factor": slow, "specific": specific, "fx": fx_usd,
+            "factor": factor, "slow_factor": slow, "specific": specific, "basis": basis, "fx": fx_usd,
             "trading": agg["trading"], "delay_cost": agg["delay_cost"], "impact_cost": agg["impact_cost"],
             "commissions": agg["commissions"], "financing": fin.financing_usd.values,
             "borrow": fin.borrow_usd.values, "funding": fin.funding_usd.values,

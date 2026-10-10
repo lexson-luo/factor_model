@@ -370,9 +370,9 @@ Named factors only:
 | A1_US_STATARB | C1_US_EVENT | 0.140 | 0.001 | no |
 | B1_US_INTRADAY | D1_US_CROWDING | -0.115 | 0.005 | no |
 | A2_CN_STATARB | D1_US_CROWDING | -0.088 | 0.033 | no |
-| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.068 | 0.100 | no |
+| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.068 | 0.099 | no |
 | B1_US_INTRADAY | C1_US_EVENT | 0.062 | 0.135 | no |
-| D1_US_CROWDING | E1_CRYPTO_CARRY | -0.059 | 0.152 | no |
+| D1_US_CROWDING | E1_CRYPTO_CARRY | -0.058 | 0.159 | no |
 | C1_US_EVENT | D1_US_CROWDING | 0.046 | 0.267 | no |
 
 Core model (named + statistical):
@@ -383,8 +383,8 @@ Core model (named + statistical):
 | B1_US_INTRADAY | D1_US_CROWDING | -0.106 | 0.010 | no |
 | A1_US_STATARB | C1_US_EVENT | 0.088 | 0.033 | no |
 | A2_CN_STATARB | D1_US_CROWDING | -0.073 | 0.076 | no |
+| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.068 | 0.101 | no |
 | B1_US_INTRADAY | C1_US_EVENT | 0.068 | 0.101 | no |
-| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.067 | 0.102 | no |
 | A1_US_STATARB | A2_CN_STATARB | -0.044 | 0.292 | no |
 | A2_CN_STATARB | B1_US_INTRADAY | 0.039 | 0.348 | no |
 
@@ -501,8 +501,8 @@ Did forecasts flag the risk beforehand, and does attribution explain the loss af
 | Quant deleveraging | 2025-03-11 | A2_CN_STATARB | 85,501 | 141,544 | -39.594 | 38,793 | 0.454 | 57,415 | -12,242 | -96,384 | – |
 | Tariff shock / CN limit-down cascade | 2025-04-07 | A2_CN_STATARB | 127,522 | 144,335 | -11.649 | -0.16m | -1.238 | -41,498 | -0.12m | -67,013 | 26.3% |
 | Momentum/value rotation | 2025-11-10 | A2_CN_STATARB | 165,390 | 139,096 | 18.904 | -22,307 | -0.135 | 11,896 | -11,272 | -63,174 | -53.3% |
-| Global carry-trade unwind | 2024-08-05 | E1_CRYPTO_CARRY | 264,988 | 234,087 | 13.201 | 0.69m | 2.599 | -0.46m | 1.14m | -0.42m | – |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | E1_CRYPTO_CARRY | 253,982 | 245,466 | 3.469 | 0.22m | 0.876 | 0.18m | 45,424 | 50,993 | – |
+| Global carry-trade unwind | 2024-08-05 | E1_CRYPTO_CARRY | 264,988 | 234,087 | 13.201 | 0.69m | 2.599 | -0.46m | 1.15m | -0.42m | – |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | E1_CRYPTO_CARRY | 253,982 | 245,466 | 3.469 | 0.22m | 0.876 | 0.18m | 40,011 | 50,993 | – |
 | Crypto liquidation cascade | 2025-10-10 | E1_CRYPTO_CARRY | 345,680 | 245,387 | 40.872 | 0.29m | 0.848 | 38,744 | 0.25m | -90,673 | – |
 
 ## 8b. Intraday model
@@ -524,7 +524,7 @@ Bar-level bias statistics of start-of-bar holdings P&L. With the U-shaped profil
 
 ### Asynchronous trading (Epps effect)
 
-Average stock beta to index futures: daily 0.85, concurrent 30-minute 0.78, lag-corrected (Dimson) 1.00. Concurrent intraday betas are biased toward zero; intraday exposures use Dimson betas shrunk toward the daily beta.
+Average stock beta to index futures: daily 0.85, concurrent 30-minute 0.78, lag-corrected (Dimson) 1.00 (same bar 0.78 + next bar 0.22). Concurrent intraday betas are biased toward zero. Intraday exposures use the two Dimson parts separately: the same-bar part shrunk toward the daily beta and the next-bar part toward zero, so each bar removes the futures response that actually lands in it.
 
 ### Macro announcement bars
 

@@ -34,7 +34,7 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 | B1_US_INTRADAY | TEAM_BRAVO | 6.01m | 12.22m | 2.969 | [1.65, 4.29] | -0.528 | [-1.84, 0.78] | 3.574 | -1.13m | -41.89m |
 | C1_US_EVENT | TEAM_CHARLIE | 29.21m | 4.47m | 0.779 | [-0.53, 2.09] | 2.655 | [1.34, 3.97] | 1.317 | -0.85m | -1.00m |
 | D1_US_CROWDING | TEAM_DELTA | 50.03m | 14.69m | 2.115 | [0.80, 3.43] | 6.744 | [5.38, 8.11] | 3.918 | 5.02m | -2.89m |
-| E1_CRYPTO_CARRY | TEAM_ECHO | 20.03m | 20.68m | 2.020 | [0.73, 3.31] | 7.816 | [6.46, 9.17] | 1.687 | 5.04m | -33.45m |
+| E1_CRYPTO_CARRY | TEAM_ECHO | 20.03m | 20.68m | 2.020 | [0.73, 3.31] | 7.588 | [6.23, 8.94] | 1.687 | 5.04m | -33.45m |
 
 ### By team
 
