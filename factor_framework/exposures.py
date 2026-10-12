@@ -42,6 +42,8 @@ class ExposureSet:
     candidates: dict = field(default_factory=dict)   # medium-priority factors under test (T x N each)
     monitor: dict = field(default_factory=dict)      # background monitors (e.g. 13F ownership)
     shocks: pd.DataFrame | None = None               # observed series g for time-series factors
+    flags: dict = field(default_factory=dict)        # raw 0/+-1 values (T x N) of cap-centred event dummies
+                                                     # (+ in_play_any, the pre-limit-hit in-play flag)
     extras: dict = field(default_factory=dict)
 
     @property
@@ -62,6 +64,12 @@ class ExposureSet:
 
     def factors_in(self, group: str) -> list:
         return [f for f in self.factors if self.groups[f] == group]
+
+    def flagged(self, t: int, names) -> np.ndarray:
+        """N x len(names) bool: stocks carrying each sparse dummy on day t.  Event columns of X are
+        cap-centred (every stock is non-zero), so their raw flags are read from ``flags``."""
+        return np.column_stack([np.nan_to_num(self.flags[f][t] if f in self.flags
+                                              else self.X[t, :, self.factors.index(f)]) != 0 for f in names])
 
     def cs_factors(self) -> list:
         """Factors whose returns are estimated by the cross-sectional regression."""
@@ -102,6 +110,19 @@ def orthogonalize(y: np.ndarray, Z: np.ndarray, estu: np.ndarray, w: np.ndarray)
     sw = np.sqrt(w[m])
     b, *_ = np.linalg.lstsq(Zm * sw[:, None], y[m] * sw, rcond=None)
     return y - np.column_stack([np.ones(len(y)), Z]) @ b
+
+
+def center_dummy(raw: np.ndarray, estu: np.ndarray, capw: np.ndarray) -> np.ndarray:
+    """Subtract the cap-weighted estu mean from a sparse dummy (flagged stocks 1 - s, others -s).
+
+    A raw 0/1 column has a positive cap-weighted mean, so the regression would book part of the market
+    move as the event return and the market factor would drift from the cap-weighted universe return on
+    event days (worst for option expiry, which flags every index member).  Centring is a per-day
+    reparameterisation: the fit, residuals and event return are unchanged; only the market return moves.
+    """
+    x = np.nan_to_num(np.asarray(raw, float))
+    e = estu & (capw > 0)
+    return x - np.average(x[e], weights=capw[e]) if e.any() else x
 
 
 def _ewm_beta(r: pd.DataFrame, m: pd.Series, halflife: int, min_periods: int) -> pd.DataFrame:
@@ -264,8 +285,13 @@ class EquityExposureBuilder:
             b = _ewm_beta(r, btc_d, c.beta_halflife, c.min_history)
             rho = _ewm_corr(r, btc_d, c.beta_halflife, c.min_history)
             d["crypto_beta"] = (b * (rho.abs() > 0.15)).clip(-2, 2).shift(1)
+        d["in_play_any"] = d["in_play"]
         if "limit_hit" in p.spec.extra_factors:
             d["limit_hit"] = p.limit_flag.shift(1)
+            # a limit hit is itself a volume spike plus a large move, so it would also trip in_play and the
+            # two dummies would be collinear; the limit hit is the more specific explanation and takes the stock
+            # (in_play_any keeps the full definition for the specific-risk uplift)
+            d["in_play"] = d["in_play"].where(d["limit_hit"].fillna(0) == 0, 0.0)
         return {k: v for k, v in d.items() if v is not None}
 
     def build(self) -> ExposureSet:
@@ -299,6 +325,8 @@ class EquityExposureBuilder:
         liq_in = [n for n in ("liq_turnover", "liq_amihud", "liq_spread", "liq_tick") if n in D]
         E, Wv, C, L = estu.values, w.values, cap.values, (p.listed & p.listed.shift(1, fill_value=False)).values
         crowd_cov = np.zeros(T)
+        flags = {f: np.full((T, N), np.nan) for f in events + [f for f in ("limit_hit",) if f in fi]}
+        flags["in_play_any"] = np.where(L | E, np.nan_to_num(D["in_play_any"]), np.nan)   # not a factor
 
         for t in range(T):
             live = L[t] | E[t]
@@ -336,11 +364,13 @@ class EquityExposureBuilder:
             if p.spec.short_side_crowding:
                 Xt[:, fi["crowding"]] = np.where(np.isfinite(crowd) & (crowd != 0), Xt[:, fi["crowding"]], 0.0)
             for f in events:
-                Xt[:, fi[f]] = np.nan_to_num(D[f][t])
+                flags[f][t] = np.where(live, np.nan_to_num(D[f][t]), np.nan)
+                Xt[:, fi[f]] = center_dummy(D[f][t], e, cw)
             if "crypto_beta" in fi:
                 Xt[:, fi["crypto_beta"]] = np.nan_to_num(D["crypto_beta"][t]) if "crypto_beta" in D else 0.0
             if "limit_hit" in fi:
-                Xt[:, fi["limit_hit"]] = np.nan_to_num(D["limit_hit"][t])
+                flags["limit_hit"][t] = np.where(live, np.nan_to_num(D["limit_hit"][t]), np.nan)
+                Xt[:, fi["limit_hit"]] = center_dummy(D["limit_hit"][t], e, cw)
             Xt[~live] = np.nan
             X[t] = Xt
             for k, f in enumerate(SLOW_FACTORS):
@@ -354,7 +384,7 @@ class EquityExposureBuilder:
                            X=X, estu=estu, reg_weight=w, cap=cap, beta_pred=d["beta"], industries=industries,
                            slow_factors=list(SLOW_FACTORS), X_slow=Xs,
                            descriptors={k: v for k, v in d.items() if isinstance(v, pd.DataFrame)},
-                           candidates=Xc, monitor=Xm)
+                           candidates=Xc, monitor=Xm, flags=flags)
         expo.extras["crowding_coverage"] = pd.Series(crowd_cov, index=p.dates)
         # time-series shock factors: estimated sensitivities to observed shocks
         if p.shocks is not None and p.shocks.shape[1]:
@@ -403,18 +433,22 @@ class CryptoExposureBuilder:
         fi = {f: k for k, f in enumerate(factors)}
         E, C = estu.values, np.nan_to_num(cap.values)
         D = {k: v.values for k, v in d.items()}
+        flags = {f: np.full((T, N), np.nan) for f in CRYPTO_EVENT_FACTORS}
         for t in range(T):
             e = E[t]
             if e.sum() < 10:
                 continue
+            live = e | p.spot.notna().values[t]
             Xt = np.zeros((N, len(factors)))
             Xt[:, 0] = 1.0
             Xt[:, 1:1 + len(sectors)] = dummies
             for f in CRYPTO_STYLE_FACTORS:
                 Xt[:, fi[f]] = standardize(D[f][t], e, C[t] + 1e-9, c)
-            Xt[:, fi["token_unlock"]] = np.nan_to_num(D["token_unlock"][t])
-            Xt[~(e | p.spot.notna().values[t])] = np.nan
+            for f in CRYPTO_EVENT_FACTORS:
+                flags[f][t] = np.where(live, np.nan_to_num(D[f][t]), np.nan)
+                Xt[:, fi[f]] = center_dummy(D[f][t], e, C[t])
+            Xt[~live] = np.nan
             X[t] = Xt
         return ExposureSet(model="CRYPTO", dates=p.dates, tickers=p.symbols, factors=factors, groups=groups,
                            X=X, estu=estu, reg_weight=w, cap=cap, beta_pred=d["btc_beta"],
-                           industries=industries, descriptors=d)
+                           industries=industries, descriptors=d, flags=flags)

@@ -123,7 +123,8 @@ STYLE_FACTORS = (
 # Events and calendar (Section 2.2).  Market-wide calendar events (macro
 # announcements) cannot be cross-sectional factors - they scale factor risk instead.
 EVENT_FACTORS = ("earnings", "index_rebalance", "option_expiry", "corporate_action", "in_play")
-SPECIFIC_RISK_EVENTS = ("earnings", "in_play")      # extra specific risk on these days
+SPECIFIC_RISK_EVENTS = ("earnings", "in_play_any")  # extra specific risk on these days; in_play_any is
+                                                     # in_play before limit hits are removed from it (CN)
 MACRO_SENSITIVE = ("market", "rates", "fx", "vol_shock")   # factor risk scaled on macro days
 
 # Time-series shock factors: exposures are estimated sensitivities B to observed

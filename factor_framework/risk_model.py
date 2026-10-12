@@ -110,7 +110,7 @@ class RiskModelBuilder:
                  event_factors: tuple | list = (), macro_day: pd.Series | None = None):
         self.fm, self.cfg = fm, cfg
         self.rng = np.random.default_rng(seed)
-        self.event_factors = [f for f in event_factors if f in fm.expo.factors]
+        self.event_factors = [f for f in event_factors if f in fm.expo.factors or f in fm.expo.flags]
         idx = fm.factor_returns.index
         self.macro_day = (macro_day.reindex(idx).fillna(False).astype(bool).values
                           if macro_day is not None else np.zeros(len(idx), bool))
@@ -234,7 +234,7 @@ class RiskModelBuilder:
         sc_idx = e.idx(struct_cols) + e.idx(e.industries)
         E = e.estu.values
         cap = np.nan_to_num(e.cap.values)
-        ev_idx = [e.factors.index(f) for f in self.event_factors] or None
+        ev_names = self.event_factors or None
         for t in range(T):
             X = e.X[t]
             valid = np.all(np.isfinite(X), 1)
@@ -253,8 +253,8 @@ class RiskModelBuilder:
                 sig = np.where(np.isfinite(sig_ts), g * sig_ts + (1 - g) * sig_str, sig_str)
                 lam2 = B2 / wb if wb > 0 else 1.0
                 var = lam2 * sig ** 2
-                if ev_idx is not None:
-                    on_event = (np.nan_to_num(X[:, ev_idx]) != 0).any(axis=1)
+                if ev_names is not None:
+                    on_event = e.flagged(t, ev_names).any(axis=1)
                     var = np.where(on_event, var * cfg.event_specific_mult ** 2, var)
                 var[~valid] = np.nan
                 out[t] = var

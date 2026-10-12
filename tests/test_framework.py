@@ -162,6 +162,44 @@ def test_promoted_candidates_are_core_styles_cleaned_of_size(us_model):
 
 
 @needs_data_module
+def test_event_dummies_are_cap_centred_and_keep_raw_flags(us_model):
+    from factor_framework.config import EVENT_FACTORS
+    us, fm = us_model
+    e = fm.expo
+    t = int(np.flatnonzero(us.option_expiry.values)[-1])          # every index member flagged
+    m = e.estu.values[t]
+    cap = np.nan_to_num(e.cap.values[t])[m]
+    for f in EVENT_FACTORS:
+        x, raw = e.X[t, m, e.factors.index(f)], e.flags[f][t][m]
+        assert abs(np.average(x, weights=cap)) < 1e-12
+        assert set(np.unique(raw)) <= {-1.0, 0.0, 1.0}
+        assert np.allclose(x - raw, (x - raw)[0])                 # centring is a per-day shift only
+    # the market factor stays the cap-weighted universe return on expiry days (raw 0/1 dummies: ~60bp RMS gap)
+    cw = e.cap.where(e.estu)
+    R = fm.returns.reindex(index=e.dates, columns=e.tickers)
+    capret = (R * cw).sum(axis=1) / cw.where(R.notna()).sum(axis=1)
+    gap = (fm.factor_returns["market"] - capret)[us.option_expiry.reindex(e.dates).fillna(False).values].dropna()
+    assert np.sqrt((gap ** 2).mean()) < 0.002
+
+
+@needs_data_module
+def test_limit_hit_is_cap_centred_and_disjoint_from_in_play():
+    from factor_framework.data_loader import load_equity_panel
+    from factor_framework.exposures import EquityExposureBuilder
+    e = EquityExposureBuilder(load_equity_panel("CN")).build()
+    lh, ip = np.nan_to_num(e.flags["limit_hit"]), np.nan_to_num(e.flags["in_play"])
+    assert np.count_nonzero(lh) > 0 and set(np.unique(lh)) <= {-1.0, 0.0, 1.0}
+    assert not ((lh != 0) & (ip != 0)).any()                      # otherwise the two dummies can be collinear
+    ip_any = np.nan_to_num(e.flags["in_play_any"])               # specific-risk uplift keeps limit hits in play
+    assert ((lh != 0) & (ip_any != 0)).any() and not ((ip != 0) & (ip_any == 0)).any()
+    t = int(np.argmax((lh != 0).sum(1)))                          # busiest limit-hit day
+    m = e.estu.values[t]
+    x = e.X[t, m, e.factors.index("limit_hit")]
+    assert abs(np.average(x, weights=np.nan_to_num(e.cap.values[t])[m])) < 1e-12
+    assert np.allclose(x - lh[t, m], (x - lh[t, m])[0])
+
+
+@needs_data_module
 def test_dimson_betas_correct_epps_bias(us_model):
     from factor_framework.data_loader import load_bars, load_futures_bars
     from factor_framework.intraday import IntradayModel

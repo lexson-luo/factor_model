@@ -350,7 +350,8 @@ def factor_selection(fm: FactorModel, att: AttributionResult, market: str, start
             dr2, drc, kind = r2_b - r2_v, rc_v - rc_b, "core (drop-one)"
             if e.groups[f] in ("event", "market_specific"):
                 # sparse factors: explanatory power on the stock-days they apply to
-                aff = pd.DataFrame(np.nan_to_num(e.X[:, :, e.factors.index(f)]) != 0, index=e.dates,
+                raw = e.flags[f] if f in e.flags else e.X[:, :, e.factors.index(f)]
+                aff = pd.DataFrame(np.nan_to_num(raw) != 0, index=e.dates,
                                    columns=e.tickers) & e.estu & base.resid.notna() & out.resid.notna()
                 aff.iloc[:t0] = False
                 den = (W * out.resid ** 2).where(aff).sum().sum()

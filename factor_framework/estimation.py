@@ -103,6 +103,8 @@ class CrossSectionalRegression:
                 g = e.groups[f]
                 if g == "market":
                     active[j] = True
+                elif f in e.flags:                       # centred event dummy: count the raw flags
+                    active[j] = np.count_nonzero(np.nan_to_num(e.flags[f][t][ok])) >= 3
                 elif g in ("industry", "event", "market_specific") and np.unique(col).size <= 3:
                     active[j] = np.count_nonzero(col) >= 3
                 else:

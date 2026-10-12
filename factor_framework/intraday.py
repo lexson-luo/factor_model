@@ -160,8 +160,9 @@ class IntradayModel:
                     continue
                 Xo = X[ok]
                 groups = [e.groups[f] for f in names] + ["intraday"]
+                Fo = np.column_stack([e.flagged(t, names)[ok], Xo[:, -1:] != 0])   # raw flags (events centred)
                 active = np.array([True if g == "market" else
-                                   (np.count_nonzero(Xo[:, j]) >= 3 if g in ("industry", "event", "market_specific")
+                                   (np.count_nonzero(Fo[:, j]) >= 3 if g in ("industry", "event", "market_specific")
                                     else Xo[:, j].std() > 1e-8) for j, g in enumerate(groups)])
                 ind_cap = np.zeros(K)
                 for j in ind_idx:
