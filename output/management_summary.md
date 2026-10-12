@@ -4,7 +4,7 @@
 
 ## Key findings
 
-- **A2_CN_STATARB**: linear and SHAP attribution disagree on crowding (daily corr +0.09; linear -0.16m, SHAP -0.85m).
+- **A2_CN_STATARB**: linear and SHAP attribution disagree on crowding (daily corr +0.09; linear -0.15m, SHAP -0.85m).
 - **A1_US_STATARB** selects on characteristics outside the core model: theme_tag (XGBoost surrogate out-of-sample R² 0.23; mean |SHAP|).
 - **D1_US_CROWDING** selects on characteristics outside the core model: theme_tag (XGBoost surrogate out-of-sample R² 0.61; mean |SHAP|).
 - US named-model residuals have 7 eigenvalue(s) above the Marchenko-Pastur edge; PC1 is most associated with **theme:AI infrastructure** (corr -0.58). Recommendation: promote it to an explicit core factor through governance.
@@ -30,7 +30,7 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 | strategy | team | avg_gmv | total_pnl | sharpe | sharpe_95ci | residual_sharpe | residual_95ci | net_alpha_sharpe | factor_pnl | cost_pnl |
 |---|---|---|---|---|---|---|---|---|---|---|
 | A1_US_STATARB | TEAM_ALPHA | 60.02m | 32.51m | 4.103 | [2.77, 5.43] | 13.892 | [12.35, 15.43] | 7.225 | 8.36m | -7.73m |
-| A2_CN_STATARB | TEAM_ALPHA | 25.03m | 7.34m | 1.685 | [0.35, 3.02] | 10.588 | [9.12, 12.06] | 1.824 | 3.41m | -7.92m |
+| A2_CN_STATARB | TEAM_ALPHA | 25.03m | 7.34m | 1.685 | [0.35, 3.02] | 10.626 | [9.16, 12.09] | 1.844 | 3.38m | -7.92m |
 | B1_US_INTRADAY | TEAM_BRAVO | 6.01m | 12.22m | 2.969 | [1.65, 4.29] | -0.528 | [-1.84, 0.78] | 3.574 | -1.13m | -41.89m |
 | C1_US_EVENT | TEAM_CHARLIE | 29.21m | 4.47m | 0.779 | [-0.53, 2.09] | 2.655 | [1.34, 3.97] | 1.317 | -0.85m | -1.00m |
 | D1_US_CROWDING | TEAM_DELTA | 50.03m | 14.69m | 2.115 | [0.80, 3.43] | 6.744 | [5.38, 8.11] | 3.918 | 5.02m | -2.89m |
@@ -40,7 +40,7 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 
 | team | avg_gmv | total_pnl | factor_pnl | cost_pnl |
 |---|---|---|---|---|
-| TEAM_ALPHA | 85.05m | 39.85m | 11.77m | -15.66m |
+| TEAM_ALPHA | 85.05m | 39.85m | 11.74m | -15.66m |
 | TEAM_BRAVO | 6.01m | 12.22m | -1.13m | -41.89m |
 | TEAM_CHARLIE | 29.21m | 4.47m | -0.85m | -1.00m |
 | TEAM_DELTA | 50.03m | 14.69m | 5.02m | -2.89m |
@@ -59,8 +59,8 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 
 | strategy | gross | pred_vol_ann_pct_gmv | factor_risk_share | beta_adj_net_pct |
 |---|---|---|---|---|
-| A1_US_STATARB | 59.27m | 3.8% | 65.5% | 1.5% |
-| A2_CN_STATARB | 24.38m | 7.5% | 75.4% | -4.0% |
+| A1_US_STATARB | 59.27m | 3.8% | 65.4% | 1.5% |
+| A2_CN_STATARB | 24.38m | 7.6% | 76.0% | -4.0% |
 | B1_US_INTRADAY | 5.97m | 9.0% | 81.0% | -1.5% |
 | C1_US_EVENT | 29.70m | 5.6% | 20.5% | -1.6% |
 | D1_US_CROWDING | 49.25m | 6.5% | 85.6% | -1.4% |
@@ -70,9 +70,9 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 
 | scenario | firm_pnl_usd | crowding_scaled_usd |
 |---|---|---|
-| Aug-2007 quant deleveraging | -4.75m | -5.05m |
+| Aug-2007 quant deleveraging | -4.78m | -5.08m |
 | Jan-2021 short squeeze | -1.31m | -1.58m |
-| Mar-2020 COVID crash | -0.46m | -0.54m |
+| Mar-2020 COVID crash | -0.47m | -0.54m |
 | Aug-2024 carry unwind | -0.24m | -0.30m |
 | Rates shock / hawkish surprise | -0.13m | -0.13m |
 | Nov-2020 momentum/value rotation | 0.70m | 0.75m |

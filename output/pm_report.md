@@ -50,7 +50,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 **Intraday beta at peak position** (per $ gross): concurrent 30-minute -0.002, lag-corrected (Dimson) +0.015, daily +0.012. A gap between the first two is the Epps effect.
 
-**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model +32k / empirical -231k; liq_shock model -18k / empirical -214k; fx model -64k / empirical -14k; rates model -36k / empirical -53k
+**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model +32k / empirical -231k; liq_shock model -18k / empirical -214k; fx model -63k / empirical -14k; rates model -37k / empirical -53k
 
 **Candidate / background monitor exposures** (std units per $ gross, not attributed): hf_ownership_13f -0.03
 
@@ -58,7 +58,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| st_reversal | 19.65m | 29.5% | 13.7% | optimizer constraint |
+| st_reversal | 19.65m | 29.4% | 13.5% | optimizer constraint |
 | liquidity | -15.13m | 7.3% | 3.9% | optimizer constraint |
 
 **What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; R² 0.33 in sample, 0.23 out of sample on the last 30% of dates)
@@ -94,7 +94,7 @@ Fit by target (linear = ridge on the same features; trees adding little over lin
 
 | bucket | linear_usd | shap_usd | diff_usd | daily_corr |
 |---|---|---|---|---|
-| base | 70,875 | -0.13m | -0.20m | 0.451 |
+| base | 36,686 | -0.13m | -0.17m | 0.461 |
 | industry | 41,864 | 1.51m | 1.47m | 0.681 |
 | st_reversal | 10.10m | 2.02m | -8.08m | 0.658 |
 | volatility | 63,669 | -1.26m | -1.32m | 0.701 |
@@ -102,18 +102,18 @@ Fit by target (linear = ridge on the same features; trees adding little over lin
 | size | -2.10m | -0.30m | 1.80m | 0.645 |
 | crowding | 0.10m | -0.10m | -0.21m | 0.689 |
 | beta | -0.10m | -4,384 | 97,505 | 0.721 |
-| earnings | 0.41m | -40,262 | -0.45m | 0.227 |
-| in_play | -11,423 | 0 | 11,423 | – |
+| earnings | 0.40m | -40,262 | -0.44m | 0.227 |
+| in_play | -10,937 | 0 | 10,937 | – |
 | overnight_gap | -0.35m | 1.28m | 1.63m | 0.514 |
 | st_momentum | 0.24m | 0.37m | 0.13m | 0.502 |
 | etf_ownership | -0.39m | -0.11m | 0.27m | 0.612 |
 | retail_attention | -0.30m | 0.11m | 0.41m | -0.075 |
 | unmapped:theme_tag | 0 | -0.36m | -0.36m | – |
-| other (linear only) | -0.69m | 0 | 0.69m | – |
+| other (linear only) | -0.65m | 0 | 0.65m | – |
 | slow (linear only) | 1.12m | 0 | -1.12m | – |
 | residual | 41.50m | 46.70m | 5.21m | 0.647 |
 | outside_estu | 0 | 0.24m | 0.24m | – |
-| total | 50.97m | 50.97m | 0 | 1.000 |
+| total | 50.97m | 50.97m | -0 | 1.000 |
 
 Decision view (weight-side SHAP: P&L of the slice of the book each characteristic explains; unexplained weights +43.72m): st_reversal +9.00m; st_momentum -1.21m; unmapped:theme_tag +0.93m; liquidity -0.63m; industry -0.60m.
 
@@ -142,9 +142,9 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 
 | index | since_inception | last_20d |
 |---|---|---|
-| factor | 3.41m | -77,416 |
-| slow_factor | 0.86m | 23,128 |
-| specific | 21.00m | 0.65m |
+| factor | 3.38m | -77,150 |
+| slow_factor | 0.90m | 22,881 |
+| specific | 20.99m | 0.65m |
 | basis | 0 | 0 |
 | fx | -7,610 | -6,005 |
 | trading | -7.06m | -0.19m |
@@ -161,82 +161,82 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 
 | factor | pnl_usd |
 |---|---|
-| st_reversal | 2.16m |
-| overnight_gap | 1.73m |
+| st_reversal | 2.19m |
+| overnight_gap | 1.70m |
 | size | -1.21m |
 | beta | -0.88m |
-| ind_Autos | 0.60m |
+| ind_Autos | 0.61m |
 | slow:earnings_yield | 0.48m |
-| ind_Machinery | -0.47m |
-| st_momentum | 0.44m |
+| ind_Machinery | -0.48m |
+| st_momentum | 0.42m |
 
 **Execution costs:** 10.60 bps of 7.5bn traded (delay -3.78, impact 10.27, fees 4.10 bps).
 
-**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -35k / empirical -85k; liq_shock model -26k / empirical -70k; fx model +40k / empirical +9k; rates model -6k / empirical -9k; us_session model +32k / empirical -34k
+**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -35k / empirical -85k; liq_shock model -26k / empirical -70k; fx model +40k / empirical +9k; rates model -5k / empirical -9k; us_session model +30k / empirical -34k
 
 **Hedging / neutralisation candidates**
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| size | -9.09m | 33.8% | 19.3% | optimizer constraint |
-| st_reversal | 7.86m | 19.6% | 7.0% | optimizer constraint |
+| size | -9.09m | 34.6% | 19.7% | optimizer constraint |
+| st_reversal | 7.86m | 20.1% | 7.1% | optimizer constraint |
 
 **What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; R² 0.55 in sample, 0.48 out of sample on the last 30% of dates)
 
 | feature | mean_abs_shap_bp | shap_share | perm_importance | maps_to_core_factor |
 |---|---|---|---|---|
-| short_interest | 24.405 | 23.9% | 0.177 | crowding |
-| utilisation | 23.010 | 22.5% | 0.159 | crowding |
-| reversal_5d | 19.475 | 19.0% | 0.243 | st_reversal |
-| log_mcap | 9.809 | 9.6% | 0.072 | size |
-| intraday_mom_3d | 6.168 | 6.0% | 0.019 | st_momentum |
-| gap_5d | 4.262 | 4.2% | 0.007 | overnight_gap |
-| etf_ownership | 3.154 | 3.1% | 0.006 | etf_ownership |
-| borrow_fee | 2.957 | 2.9% | 0.002 | crowding |
+| short_interest | 24.148 | 23.7% | 0.167 | crowding |
+| utilisation | 23.517 | 23.1% | 0.163 | crowding |
+| reversal_5d | 19.364 | 19.0% | 0.241 | st_reversal |
+| log_mcap | 9.714 | 9.5% | 0.069 | size |
+| intraday_mom_3d | 6.149 | 6.0% | 0.018 | st_momentum |
+| gap_5d | 4.154 | 4.1% | 0.007 | overnight_gap |
+| etf_ownership | 3.001 | 2.9% | 0.005 | etf_ownership |
+| borrow_fee | 2.821 | 2.8% | 0.002 | crowding |
 
-Grouped by core factor (SHAP summed within a group, so correlated inputs are not split): crowding 49%; st_reversal 19%; size 10%; st_momentum 6%; overnight_gap 4%
+Grouped by core factor (SHAP summed within a group, so correlated inputs are not split): crowding 50%; st_reversal 19%; size 10%; st_momentum 6%; overnight_gap 4%
 
-Strongest interactions (mean |SHAP interaction|, bp): reversal_5d × gap_5d = 3.3; reversal_5d × short_interest = 3.3; reversal_5d × intraday_mom_3d = 2.8
+Strongest interactions (mean |SHAP interaction|, bp): reversal_5d × gap_5d = 3.3; reversal_5d × short_interest = 3.1; reversal_5d × intraday_mom_3d = 3.1
 
 Fit by target (linear = ridge on the same features; trees adding little over linear means the selection is close to a linear screen):
 
 | target | model | metric | in_sample | out_of_sample |
 |---|---|---|---|---|
-| weight | xgboost | R² | 0.549 | 0.482 |
+| weight | xgboost | R² | 0.549 | 0.479 |
 | weight | linear | R² | 0.421 | 0.464 |
-| rank | xgboost | R² | 0.514 | 0.461 |
+| rank | xgboost | R² | 0.515 | 0.461 |
 | rank | linear | R² | 0.408 | 0.459 |
-| held_only | xgboost | R² | 0.645 | 0.583 |
-| held_only | linear | R² | 0.516 | 0.564 |
-| held | xgboost | AUC | 0.852 | 0.757 |
+| held_only | xgboost | R² | 0.646 | 0.584 |
+| held_only | linear | R² | 0.516 | 0.565 |
+| held | xgboost | AUC | 0.850 | 0.758 |
 
 **SHAP cross-check of the linear attribution** (return surrogate: per-date additive XGBoost, cross-fitted R² 0.055 vs 0.054 for a cross-fitted linear model on the same features and 0.363 in-sample for the factor model). Both columns add up to the same holdings P&L. The cross-fitted surrogate cannot absorb a stock's own return, so its characteristic buckets are smaller and its residual larger: read agreement from the daily correlation and sign, not the size of the totals.
 
 | bucket | linear_usd | shap_usd | diff_usd | daily_corr |
 |---|---|---|---|---|
-| base | -23,290 | -0.29m | -0.27m | 0.734 |
-| industry | 0.27m | 1.03m | 0.75m | 0.522 |
-| st_reversal | 2.16m | 1.66m | -0.50m | 0.666 |
-| volatility | -0.28m | -0.76m | -0.48m | 0.605 |
-| liquidity | 0.24m | -0.15m | -0.39m | 0.364 |
+| base | -17,905 | -0.29m | -0.27m | 0.738 |
+| industry | 0.30m | 1.03m | 0.73m | 0.521 |
+| st_reversal | 2.19m | 1.66m | -0.54m | 0.665 |
+| volatility | -0.29m | -0.76m | -0.47m | 0.605 |
+| liquidity | 0.24m | -0.15m | -0.39m | 0.366 |
 | size | -1.21m | -0.16m | 1.06m | 0.777 |
-| crowding | -0.16m | -0.85m | -0.69m | 0.093 |
+| crowding | -0.15m | -0.85m | -0.69m | 0.093 |
 | beta | -0.88m | -0.50m | 0.38m | 0.755 |
-| earnings | 0.16m | 14,676 | -0.15m | -0.094 |
-| in_play | 48,760 | 0 | -48,760 | – |
-| overnight_gap | 1.73m | 1.24m | -0.49m | 0.438 |
-| st_momentum | 0.44m | 31,856 | -0.41m | 0.344 |
-| etf_ownership | 60,987 | -0.56m | -0.62m | 0.337 |
-| retail_attention | 99,595 | -0.16m | -0.26m | 0.131 |
+| earnings | 0.17m | 14,676 | -0.16m | -0.095 |
+| in_play | -2,576 | 0 | 2,576 | – |
+| overnight_gap | 1.70m | 1.24m | -0.45m | 0.439 |
+| st_momentum | 0.42m | 31,856 | -0.39m | 0.344 |
+| etf_ownership | 56,107 | -0.56m | -0.61m | 0.337 |
+| retail_attention | 0.10m | -0.16m | -0.26m | 0.130 |
 | other (linear only) | 0.75m | 0 | -0.75m | – |
-| slow (linear only) | 0.86m | 0 | -0.86m | – |
-| residual | 21.00m | 24.63m | 3.63m | 0.652 |
+| slow (linear only) | 0.90m | 0 | -0.90m | – |
+| residual | 20.99m | 24.63m | 3.64m | 0.653 |
 | outside_estu | 0 | 87,906 | 87,906 | – |
-| total | 25.27m | 25.27m | 0 | 1.000 |
+| total | 25.27m | 25.27m | -0 | 1.000 |
 
 Disagreement (daily correlation below 0.3 on a material bucket): crowding (corr +0.09)
 
-Decision view (weight-side SHAP: P&L of the slice of the book each characteristic explains; unexplained weights +25.84m): st_reversal +1.97m; crowding -1.34m; overnight_gap -0.46m; st_momentum -0.34m; industry -0.16m.
+Decision view (weight-side SHAP: P&L of the slice of the book each characteristic explains; unexplained weights +25.93m): st_reversal +1.89m; crowding -1.41m; overnight_gap -0.40m; st_momentum -0.33m; industry -0.20m.
 
 **Model release comparison (20 days before vs after)**
 
@@ -253,7 +253,7 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 | v2.3 | 2025-05-12 | size | 0.001 | -0.249 | -6.374 | yes |
 | v2.3 | 2025-05-12 | st_momentum | -0.139 | -0.119 | 0.528 | no |
 | v2.3 | 2025-05-12 | st_reversal | 0.419 | 0.409 | -0.255 | no |
-| v2.3 | 2025-05-12 | stat_1 | -0.026 | 0.018 | 1.887 | no |
+| v2.3 | 2025-05-12 | stat_1 | 0.029 | -0.017 | -1.994 | no |
 | v2.3 | 2025-05-12 | us_session | 0.005 | 0.017 | 1.676 | no |
 | v2.3 | 2025-05-12 | vol_shock | -0.004 | -0.006 | -1.178 | no |
 | v2.3 | 2025-05-12 | volatility | 0.030 | 0.140 | 2.672 | no |
@@ -285,7 +285,7 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 |---|---|
 | size | -0.76m |
 | crypto_beta | -0.25m |
-| market | 0.25m |
+| market | 0.24m |
 | overnight_gap | -0.23m |
 | rates | -0.20m |
 | vol_shock | 0.15m |
@@ -312,8 +312,8 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| size | -5.06m | 39.0% | 22.7% | optimizer constraint |
-| volatility | 2.52m | 10.9% | 6.7% | optimizer constraint |
+| size | -5.06m | 38.8% | 22.6% | optimizer constraint |
+| volatility | 2.52m | 10.9% | 6.8% | optimizer constraint |
 
 **Model release comparison (20 days before vs after)**
 
@@ -426,7 +426,7 @@ Fit by target (linear = ridge on the same features; trees adding little over lin
 
 | bucket | linear_usd | shap_usd | diff_usd | daily_corr |
 |---|---|---|---|---|
-| base | -0.11m | 0.23m | 0.34m | 0.337 |
+| base | -82,884 | 0.23m | 0.31m | 0.362 |
 | industry | 0.47m | 1.02m | 0.55m | 0.660 |
 | st_reversal | -2.31m | -0.31m | 2.00m | 0.507 |
 | volatility | 0.78m | 0.83m | 50,745 | 0.443 |
@@ -434,14 +434,14 @@ Fit by target (linear = ridge on the same features; trees adding little over lin
 | size | 0.91m | 0.13m | -0.78m | 0.568 |
 | crowding | 0.35m | 0.20m | -0.15m | 0.592 |
 | beta | -1.25m | -0.87m | 0.38m | 0.762 |
-| earnings | 0 | -3,111 | -3,111 | – |
+| earnings | -2,699 | -3,111 | -412 | -0.261 |
 | in_play | -0.25m | 0 | 0.25m | – |
 | overnight_gap | 0.76m | -0.10m | -0.86m | 0.440 |
 | st_momentum | 0.43m | 0.12m | -0.31m | 0.499 |
 | etf_ownership | -0.24m | -0.15m | 88,071 | 0.484 |
 | retail_attention | 86,261 | -0.11m | -0.19m | 0.621 |
 | unmapped:theme_tag | 0 | 0.15m | 0.15m | – |
-| other (linear only) | 0.17m | 0 | -0.17m | – |
+| other (linear only) | 0.15m | 0 | -0.15m | – |
 | slow (linear only) | -0.18m | 0 | 0.18m | – |
 | residual | 11.11m | 9.44m | -1.68m | 0.874 |
 | outside_estu | 0 | -0.14m | -0.14m | – |
@@ -523,7 +523,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
 | crowding | -40.63m | 25.9% | 13.4% | optimizer constraint |
-| volatility | 24.66m | 23.4% | 12.4% | optimizer constraint |
+| volatility | 24.66m | 23.5% | 12.5% | optimizer constraint |
 
 **What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; R² 0.72 in sample, 0.61 out of sample on the last 30% of dates)
 
@@ -558,7 +558,7 @@ Fit by target (linear = ridge on the same features; trees adding little over lin
 
 | bucket | linear_usd | shap_usd | diff_usd | daily_corr |
 |---|---|---|---|---|
-| base | -0.11m | 8,866 | 0.11m | 0.459 |
+| base | -0.12m | 8,866 | 0.13m | 0.462 |
 | industry | -0.51m | 0.89m | 1.39m | 0.712 |
 | st_reversal | 53,644 | -0.12m | -0.17m | 0.585 |
 | volatility | 3.40m | 1.02m | -2.38m | 0.834 |
@@ -566,14 +566,14 @@ Fit by target (linear = ridge on the same features; trees adding little over lin
 | size | 17,953 | 0.22m | 0.20m | 0.692 |
 | crowding | 0.92m | -0.40m | -1.33m | 0.885 |
 | beta | -0.47m | -0.26m | 0.21m | 0.628 |
-| earnings | 80,088 | 15,253 | -64,835 | 0.100 |
-| in_play | -41,647 | 0 | 41,647 | – |
+| earnings | 82,700 | 15,253 | -67,447 | 0.099 |
+| in_play | -40,369 | 0 | 40,369 | – |
 | overnight_gap | 25,302 | 35,034 | 9,732 | 0.467 |
 | st_momentum | 1.18m | 71,214 | -1.10m | 0.392 |
 | etf_ownership | -34,686 | 0.36m | 0.40m | 0.543 |
 | retail_attention | -84,787 | -9,805 | 74,982 | 0.466 |
 | unmapped:theme_tag | 0 | -0.31m | -0.31m | – |
-| other (linear only) | 0.72m | 0 | -0.72m | – |
+| other (linear only) | 0.73m | 0 | -0.73m | – |
 | slow (linear only) | 0.22m | 0 | -0.22m | – |
 | residual | 16.27m | 19.90m | 3.63m | 0.588 |
 | outside_estu | 0 | 98,622 | 98,622 | – |
@@ -660,9 +660,9 @@ Holdings-based exposures vs a rolling regression of strategy returns on factor r
 
 | factor | returns_based | holdings_based |
 |---|---|---|
-| beta | -0.344 | -0.425 |
-| market | -0.043 | -0.002 |
-| st_reversal | -0.157 | -0.195 |
+| beta | -0.336 | -0.425 |
+| market | -0.047 | -0.002 |
+| st_reversal | -0.158 | -0.195 |
 | volatility | 0.182 | 0.070 |
 
 ## Appendix A: intraday factor P&L by factor
@@ -686,22 +686,22 @@ Split of `overnight_factor` and `intraday_factor` from the intraday decompositio
 | stat_2 | statistical | -64,377 | -18,420 | -82,797 |
 | ind_Utilities | industry | 40,708 | 35,560 | 76,268 |
 | ind_Energy | industry | -38,712 | -32,857 | -71,569 |
-| earnings | event | 55,652 | 623 | 56,275 |
-| market | market | -1,975 | -51,543 | -53,518 |
+| earnings | event | 55,026 | 224 | 55,250 |
+| market | market | -1,669 | -48,159 | -49,828 |
 | ind_Consumer Discretionary | industry | -6,933 | -30,907 | -37,839 |
 | ind_Health Care | industry | -26,990 | 54,407 | 27,418 |
 | retail_attention | style | 13,740 | 11,932 | 25,672 |
 | ind_Consumer Staples | industry | -15,540 | -9,308 | -24,848 |
+| option_expiry | event | -1,270 | -21,844 | -23,114 |
 | ind_Materials | industry | 41,663 | -18,763 | 22,900 |
 | stat_1 | statistical | -8,316 | -11,967 | -20,283 |
-| option_expiry | event | -1,597 | -18,571 | -20,168 |
 | ind_Communication | industry | -7,430 | -12,143 | -19,573 |
 | volatility | style | -67,827 | 81,155 | 13,329 |
 | overnight_gap | style | -93,204 | 98,616 | 5,411 |
-| in_play | event | 5,107 | -1,756 | 3,351 |
+| in_play | event | 5,074 | -1,789 | 3,285 |
+| corporate_action | event | 2,650 | -398 | 2,253 |
 | ind_Technology | industry | -21,517 | 19,353 | -2,164 |
-| corporate_action | event | 2,625 | -719 | 1,906 |
-| index_rebalance | event | 643 | 323 | 966 |
+| index_rebalance | event | 643 | 323 | 967 |
 | ind_Financials | industry | 23,502 | -23,630 | -128 |
 | TOTAL |  | 1.04m | 1.39m | 2.43m |
 
@@ -725,18 +725,18 @@ Split of `overnight_factor` and `intraday_factor` from the intraday decompositio
 | liquidity | style | 1,315 | -0.11m | -0.11m |
 | ind_Industrials | industry | 153 | -0.11m | -0.11m |
 | ind_Consumer Discretionary | industry | -5,086 | -85,795 | -90,881 |
+| option_expiry | event | -3,366 | -60,859 | -64,225 |
 | st_momentum | style | 27,360 | -83,919 | -56,559 |
-| option_expiry | event | -3,929 | -51,480 | -55,409 |
-| market | market | -2,200 | -41,545 | -43,744 |
 | ind_Materials | industry | -4,397 | -37,514 | -41,911 |
 | overnight_gap | style | -4,389 | 38,025 | 33,636 |
 | stat_2 | statistical | 2,877 | -34,120 | -31,242 |
+| market | market | -676 | -30,549 | -31,225 |
 | retail_attention | style | 7,340 | -35,307 | -27,967 |
 | ind_Semiconductors | industry | 7,795 | -29,367 | -21,571 |
-| earnings | event | -1,925 | -12,430 | -14,354 |
+| earnings | event | -4,092 | -14,199 | -18,291 |
 | ind_Consumer Staples | industry | 6,512 | -11,574 | -5,063 |
-| in_play | event | -4,862 | 256 | -4,605 |
-| corporate_action | event | -619 | -1,460 | -2,079 |
+| in_play | event | -4,882 | 2 | -4,879 |
+| corporate_action | event | -517 | -1,053 | -1,571 |
 | index_rebalance | event | 0 | 579 | 579 |
 | etf_ownership | style | 7,919 | -7,551 | 368 |
 | TOTAL |  | -0.14m | -4.40m | -4.55m |
@@ -758,22 +758,23 @@ Split of `overnight_factor` and `intraday_factor` from the intraday decompositio
 | beta | style | 79,021 | -12,420 | 66,601 |
 | crowding | style | -28,686 | -34,340 | -63,026 |
 | ind_Health Care | industry | -16,760 | -37,073 | -53,833 |
-| option_expiry | event | 32,741 | 16,615 | 49,356 |
+| option_expiry | event | 31,923 | 14,418 | 46,341 |
 | ind_Technology | industry | -18,168 | -27,801 | -45,970 |
 | ind_Industrials | industry | -23,331 | -16,167 | -39,498 |
 | etf_ownership | style | -31,511 | -5,866 | -37,377 |
 | stat_1 | statistical | 3,593 | 33,379 | 36,972 |
-| in_play | event | 25,664 | 11,104 | 36,768 |
+| in_play | event | 25,630 | 11,064 | 36,694 |
 | ind_Materials | industry | 1,160 | 34,673 | 35,833 |
 | liquidity | style | 46,301 | -12,213 | 34,089 |
-| market | market | -1,851 | -26,224 | -28,075 |
 | ind_Financials | industry | -20,624 | -6,791 | -27,416 |
+| market | market | -980 | -24,084 | -25,064 |
 | st_reversal | style | -0.29m | 0.32m | 24,889 |
 | stat_2 | statistical | 38,778 | -24,366 | 14,412 |
 | ind_Consumer Staples | industry | 5,343 | -15,980 | -10,637 |
-| corporate_action | event | 4,194 | 3,988 | 8,181 |
+| corporate_action | event | 4,255 | 3,938 | 8,194 |
 | index_rebalance | event | -1,016 | -133 | -1,148 |
 | volatility | style | 13,364 | -12,677 | 687 |
+| earnings | event | -81 | 146 | 66 |
 | TOTAL |  | 0.10m | 0.40m | 0.50m |
 
 ### D1_US_CROWDING
@@ -793,22 +794,22 @@ Split of `overnight_factor` and `intraday_factor` from the intraday decompositio
 | ind_Energy | industry | 55,903 | 33,144 | 89,048 |
 | ind_Utilities | industry | -34,382 | -42,433 | -76,816 |
 | etf_ownership | style | 32,608 | 41,819 | 74,428 |
-| option_expiry | event | -24,160 | -32,158 | -56,318 |
 | ind_Semiconductors | industry | 32,338 | 23,882 | 56,220 |
+| option_expiry | event | -25,315 | -30,860 | -56,175 |
 | ind_Financials | industry | -9,614 | -29,458 | -39,072 |
 | stat_2 | statistical | -29,462 | 207 | -29,255 |
 | ind_Consumer Staples | industry | 9,662 | 19,431 | 29,093 |
 | overnight_gap | style | -75,821 | 0.10m | 28,071 |
-| earnings | event | -20,625 | -6,089 | -26,714 |
+| earnings | event | -19,942 | -5,871 | -25,813 |
 | ind_Materials | industry | 2,680 | -21,710 | -19,030 |
 | ind_Consumer Discretionary | industry | -2,389 | -14,030 | -16,419 |
 | stat_1 | statistical | 8,975 | 1,701 | 10,675 |
 | ind_Health Care | industry | -1,179 | 9,499 | 8,320 |
-| corporate_action | event | -2,101 | -3,013 | -5,114 |
-| market | market | -1,694 | 5,412 | 3,718 |
+| corporate_action | event | -2,136 | -2,946 | -5,082 |
 | liquidity | style | -14,075 | 17,669 | 3,595 |
+| market | market | -1,261 | 3,784 | 2,523 |
 | retail_attention | style | 2,077 | -4,448 | -2,371 |
-| in_play | event | 535 | -1,495 | -960 |
+| in_play | event | 610 | -1,451 | -841 |
 | index_rebalance | event | 627 | 34 | 661 |
 | TOTAL |  | 0.40m | 1.31m | 1.71m |
 
