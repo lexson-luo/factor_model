@@ -46,8 +46,8 @@ def factor_bias(fm: FactorModel, rm: RiskModel, window: int = MODEL.bias_window)
                        index=rm.dates, columns=rm.factors).replace(0, np.nan)
     rows = []
     for f in rm.factors:
-        z = fm.factor_returns[f] / vol[f]
-        z = z[fm.factor_returns[f] != 0]
+        z = rm.factor_returns[f] / vol[f]
+        z = z[rm.factor_returns[f] != 0]
         b = bias_stat(z, window)
         rows.append({"factor": f, "group": rm.groups[f], **summarize_bias(b, window)})
     return pd.DataFrame(rows)

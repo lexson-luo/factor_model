@@ -212,15 +212,21 @@ class SlowFactorLayer:
             ok = rows & E[t] & np.isfinite(U[t])
             if ok.sum() < Xc.shape[1] + Ks + 10:
                 continue
+            # a descriptor with no cross-sectional dispersion (e.g. 12-1 momentum before a year of
+            # history) is not estimable that day: return NaN, not 0, as for inactive core factors
+            act = Xs[ok].std(axis=0) > 1e-8
+            if not act.any():
+                continue
             sw = np.sqrt(W[t][ok])
-            B, *_ = np.linalg.lstsq(Xc[ok] * sw[:, None], Xs[ok] * sw[:, None], rcond=None)
+            B, *_ = np.linalg.lstsq(Xc[ok] * sw[:, None], Xs[ok][:, act] * sw[:, None], rcond=None)
             perp = np.full((N, Ks), np.nan)
-            perp[rows] = Xs[rows] - Xc[rows] @ B
+            perp[rows] = 0.0
+            perp[np.ix_(rows, act)] = Xs[rows][:, act] - Xc[rows] @ B
             Xp[t] = perp
-            g, *_ = np.linalg.lstsq(perp[ok] * sw[:, None], U[t][ok] * sw, rcond=None)
-            G[t] = g
+            g, *_ = np.linalg.lstsq(perp[ok][:, act] * sw[:, None], U[t][ok] * sw, rcond=None)
+            G[t, act] = g
             v = rows & np.isfinite(U[t])
-            Eres[t, v] = U[t, v] - perp[v] @ g
+            Eres[t, v] = U[t, v] - perp[v][:, act] @ g
         return pd.DataFrame(G, index=expo.dates, columns=expo.slow_factors), Xp, \
             pd.DataFrame(Eres, index=expo.dates, columns=expo.tickers)
 

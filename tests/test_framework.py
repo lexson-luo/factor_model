@@ -56,6 +56,27 @@ def test_eigen_adjustment_inflates_small_eigenvalues():
     assert np.all(np.isfinite(g))
 
 
+def test_slow_block_leaves_core_covariance_unchanged_and_is_psd():
+    from factor_framework.config import MODEL
+    from factor_framework.risk_model import RiskModelBuilder
+    rng = np.random.default_rng(4)
+    T, Kc, Ks = 300, 6, 3
+    core = rng.normal(0, 0.01, (T, Kc))
+    slow = 0.6 * core[:, :Ks] + rng.normal(0, 0.004, (T, Ks))      # correlated with the core
+    slow[:120, 2] = np.nan                                         # one slow factor starts late
+    fr = pd.DataFrame(np.c_[core, slow], index=pd.bdate_range("2024-01-01", periods=T))
+    A = rng.normal(size=(Kc, Kc))
+    Fc = np.repeat((A @ A.T / Kc * 1e-4)[None], T, 0)
+    Fc[:60] = np.nan                                               # core not yet estimated
+    b = RiskModelBuilder.__new__(RiskModelBuilder)
+    b.cfg, b.factor_returns = MODEL, fr
+    F, _ = b.link_slow_block(Fc, np.full(T, 0.2))
+    live = np.isfinite(Fc).all((1, 2))
+    assert np.array_equal(F[live][:, :Kc, :Kc], Fc[live])            # core block bit-for-bit unchanged
+    assert not np.isfinite(F[~live]).any()
+    assert min(np.linalg.eigvalsh(F[t]).min() for t in np.where(live)[0]) > 0
+
+
 def test_carino_linking_adds_up():
     rng = np.random.default_rng(4)
     comp = pd.DataFrame(rng.normal(0, 0.005, (50, 3)), columns=list("abc"))

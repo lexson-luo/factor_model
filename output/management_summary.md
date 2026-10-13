@@ -15,7 +15,7 @@
 - Model release **C1_US_EVENT v1.4** (2026-01-12) most changed `beta` exposure -0.41 -> -0.18 (t=4.8).
 - Model release **E1_CRYPTO_CARRY v1.6** (2025-12-01) most changed `funding` exposure -0.65 -> -0.44 (t=4.3).
 - Model release **A1_US_STATARB v3.2** (2025-09-15) most changed `beta` exposure -0.07 -> +0.06 (t=3.2).
-- **A1_US_STATARB** is short volatility: a 3-sigma implied-vol shock has historically cost 231k (t=-9.3), while the Gaussian risk model implies +32k - liquidity-provision losses cluster in stress, so shock limits use the worse of the two.
+- **A1_US_STATARB** is short volatility: a 3-sigma implied-vol shock has historically cost 231k (t=-9.3), while the Gaussian risk model implies +28k - liquidity-provision losses cluster in stress, so shock limits use the worse of the two.
 - **D1_US_CROWDING** is short volatility: a 3-sigma implied-vol shock has historically cost 101k (t=-4.4), consistent with the risk model.
 - **B1_US_INTRADAY** looks intraday beta-neutral on concurrent 30-minute betas (-0.015 per $ gross) but carries +0.046 on lag-corrected betas (Epps effect) - hedge with Dimson betas.
 - Internal crowding (US): 177 names are held on the same side by two or more teams (77% of firm gross); exiting together costs 22k more than each team exiting alone.
@@ -59,11 +59,11 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 
 | strategy | gross | pred_vol_ann_pct_gmv | factor_risk_share | beta_adj_net_pct |
 |---|---|---|---|---|
-| A1_US_STATARB | 59.27m | 3.8% | 65.4% | 1.5% |
-| A2_CN_STATARB | 24.38m | 7.6% | 76.0% | -4.0% |
-| B1_US_INTRADAY | 5.97m | 9.0% | 81.0% | -1.5% |
-| C1_US_EVENT | 29.70m | 5.6% | 20.5% | -1.6% |
-| D1_US_CROWDING | 49.25m | 6.5% | 85.6% | -1.4% |
+| A1_US_STATARB | 59.27m | 3.8% | 66.9% | 1.5% |
+| A2_CN_STATARB | 24.38m | 7.6% | 77.3% | -4.0% |
+| B1_US_INTRADAY | 5.97m | 9.0% | 81.6% | -1.5% |
+| C1_US_EVENT | 29.70m | 5.6% | 24.2% | -1.6% |
+| D1_US_CROWDING | 49.25m | 6.5% | 86.0% | -1.4% |
 | E1_CRYPTO_CARRY | 20.33m | 26.2% | 71.4% | -7.8% |
 
 ## Firm-level tail risk (hypothetical scenarios on current holdings)
@@ -75,6 +75,6 @@ Residual Sharpe uses only the non-factor part of holding P&L; 95% confidence int
 | Mar-2020 COVID crash | -0.47m | -0.54m |
 | Aug-2024 carry unwind | -0.24m | -0.30m |
 | Rates shock / hawkish surprise | -0.13m | -0.13m |
-| Nov-2020 momentum/value rotation | 0.70m | 0.75m |
+| Nov-2020 momentum/value rotation | 0.35m | 0.39m |
 | Nov-2022 FTX failure | 1.07m | 1.07m |
 | May-2022 LUNA collapse | 2.39m | 2.39m |

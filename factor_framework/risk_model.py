@@ -13,10 +13,20 @@ Factor covariance (forecast for day t made at the close of t-1):
    the historical ratio of standardised squared market returns on macro days to
    other days.
 
-Specific risk: EWMA time-series estimate blended with a structural model
-(log specific vol regressed on size, volatility, liquidity and industry) for
-stocks with short histories, a specific-risk regime adjustment and a
-multiplier on known event days (earnings, token unlocks).
+Slow factors (monitoring layer) are part of the covariance as "slow:<name>",
+with their core-orthogonalised exposures and second-stage returns, so a slow
+tilt is common risk rather than diversifiable specific risk.  Estimation is
+unchanged: core factor returns keep priority, slow factors get the leftover.
+They are appended by block augmentation (as the global layer links local
+models): the core block is estimated on core factors alone and stays exactly
+as it would be without the slow layer; only the slow block (plain EWMA vols)
+and the slow-core cross block are added.
+
+Specific risk: EWMA time-series estimate (on the residual after the slow
+layer) blended with a structural model (log specific vol regressed on size,
+volatility, liquidity and industry) for stocks with short histories, a
+specific-risk regime adjustment and a multiplier on known event days
+(earnings, token unlocks).
 """
 from __future__ import annotations
 
@@ -79,6 +89,7 @@ class RiskModel:
     eigen_gamma: pd.DataFrame
     raw_factor_vol: pd.DataFrame = field(default_factory=pd.DataFrame)
     macro_mult: pd.Series = field(default_factory=pd.Series)
+    factor_returns: pd.DataFrame = field(default_factory=pd.DataFrame)   # the series F is estimated on
 
     def factor_vol(self, t: int) -> pd.Series:
         return pd.Series(np.sqrt(np.clip(np.diag(self.F[t]), 0, None)), index=self.factors)
@@ -111,17 +122,31 @@ class RiskModelBuilder:
         self.fm, self.cfg = fm, cfg
         self.rng = np.random.default_rng(seed)
         self.event_factors = [f for f in event_factors if f in fm.expo.factors or f in fm.expo.flags]
+        self.factor_returns, self.X, self.groups = self._with_slow_factors(fm)
         idx = fm.factor_returns.index
         self.macro_day = (macro_day.reindex(idx).fillna(False).astype(bool).values
                           if macro_day is not None else np.zeros(len(idx), bool))
 
+    @staticmethod
+    def _with_slow_factors(fm: FactorModel):
+        """Core factor returns and exposures plus the slow layer as "slow:<name>" factors.  Slow exposures
+        are the core-orthogonalised ones; a stock the core models but the slow layer skipped gets 0."""
+        e = fm.expo
+        if fm.slow_returns is None or fm.X_slow_perp is None:
+            return fm.factor_returns, e.X, dict(e.groups)
+        names = [f"slow:{c}" for c in fm.slow_returns.columns]
+        fr = pd.concat([fm.factor_returns, fm.slow_returns.set_axis(names, axis=1)], axis=1)
+        core_ok = np.all(np.isfinite(e.X), 2, keepdims=True)
+        X = np.concatenate([e.X, np.where(core_ok, np.nan_to_num(fm.X_slow_perp), np.nan)], axis=2)
+        return fr, X, {**e.groups, **{n: "slow" for n in names}}
+
     # ---------------- factor covariance ---------------- #
-    def factor_covariance(self):
+    def factor_covariance(self, fr: pd.DataFrame):
         """EWMA covariance with per-factor (and pairwise) weights so factors that are only
         observed on some days (events, limit hits, statistical factors before their window
         fills) get variances conditional on the days they are active."""
         cfg = self.cfg
-        f = self.fm.factor_returns.values
+        f = fr.values
         T, K = f.shape
         lv, lc, lb = _decay(cfg.vol_halflife), _decay(cfg.corr_halflife), _decay(cfg.vra_halflife)
         Sv = np.zeros(K); wv = np.zeros(K)
@@ -137,7 +162,7 @@ class RiskModelBuilder:
         t_eff = int(1.5 * cfg.corr_halflife)
         history = []
         min_w = 1 - lv ** 10                  # ~10 observations before a factor's own vol is trusted
-        names = list(self.fm.factor_returns.columns)
+        names = list(fr.columns)
         macro_idx = [k for k, f in enumerate(names) if f in MACRO_SENSITIVE]
         mkt = names.index("market") if "market" in names else 0
         acc = {True: [0.0, 0], False: [0.0, 0]}       # sum of z^2 and count, macro vs other days
@@ -217,13 +242,74 @@ class RiskModelBuilder:
         idx = self.fm.factor_returns.index
         self.macro_mult = pd.Series(macro_mult, idx)
         return F, pd.Series(vra, idx), pd.Series(shrink, idx), \
-            pd.DataFrame(gam_hist, idx), pd.DataFrame(rawvol, idx, self.fm.factor_returns.columns)
+            pd.DataFrame(gam_hist, idx), pd.DataFrame(rawvol, idx, fr.columns)
+
+    def link_slow_block(self, Fc: np.ndarray, shrink: np.ndarray):
+        """Block augmentation: append the slow factors to the core covariance Fc without changing it.
+
+        Slow vols are plain EWMA vols on the core vol half-life.  The core regime multiplier is not
+        applied: it is calibrated against the eigen-adjusted core forecasts and partly undoes that
+        adjustment's inflation, so on the slow block it under-forecasts (bias ~1.15 against ~1.0
+        without it; a slow-only multiplier on five factors adds noise and does no better).
+        Slow-slow and slow-core correlations use the core correlation half-life, sparse-pair
+        shrinkage and that day's Ledoit-Wolf intensity.  The matrix is made valid through the Schur
+        complement: the slow block is raised to at least what its covariance with the core implies,
+        so the core block and the cross block are kept as is."""
+        cfg = self.cfg
+        f = self.factor_returns.values                    # core columns first, then slow
+        T, K = f.shape
+        Kc = Fc.shape[1]
+        s = slice(Kc, K)
+        lv, lc = _decay(cfg.vol_halflife), _decay(cfg.corr_halflife)
+        min_w = 1 - lv ** 10
+        Sv = np.zeros(K - Kc); wv = np.zeros(K - Kc)
+        Sc = np.zeros((K, K)); wc = np.zeros((K, K))
+        F = np.full((T, K, K), np.nan)
+        rawvol = np.full((T, K - Kc), np.nan)
+        for t in range(T):
+            Fct = Fc[t]
+            if np.isfinite(Fct).all():
+                ok = wv > min_w
+                var = np.where(ok, Sv / np.where(ok, wv, 1), np.nan)
+                fallback = np.nanmedian(var) if ok.any() else np.median(np.diag(Fct))
+                var = np.clip(np.where(ok, var, fallback), 1e-14, None)
+                okc = wc > (1 - lc ** 20)
+                C = np.where(okc, Sc / np.where(okc, wc, 1), 0.0)
+                dc = np.sqrt(np.clip(np.diag(C), 1e-14, None))
+                corr = np.where(okc, np.clip(C / np.outer(dc, dc), -0.99, 0.99), 0.0)
+                n_ij = wc / (1 - lc)
+                corr = corr * n_ij / (n_ij + 30.0) * (1 - shrink[t])
+                sd_s = np.sqrt(var)
+                sd_c = np.sqrt(np.clip(np.diag(Fct), 0, None))
+                Finv = np.linalg.pinv(Fct, rcond=1e-10, hermitian=True)
+                cross = (corr[s, :Kc] * np.outer(sd_s, sd_c)) @ (Finv @ Fct)    # kept within the core's range
+                Sss = corr[s, s] * np.outer(sd_s, sd_s)
+                np.fill_diagonal(Sss, sd_s ** 2)
+                implied = cross @ Finv @ cross.T
+                d, U = np.linalg.eigh(0.5 * (Sss - implied + (Sss - implied).T))
+                Sss = implied + (U * np.clip(d, 1e-4 * np.mean(sd_s ** 2), None)) @ U.T
+                F[t, :Kc, :Kc] = Fct
+                F[t, s, :Kc] = cross
+                F[t, :Kc, s] = cross.T
+                F[t, s, s] = Sss
+                rawvol[t] = np.sqrt(var)
+            ft = f[t]
+            obs = np.isfinite(ft)
+            if not obs.any():
+                continue
+            fz = np.where(obs, ft, 0.0)
+            Sv = np.where(obs[s], lv * Sv + (1 - lv) * fz[s] ** 2, Sv)
+            wv = np.where(obs[s], lv * wv + (1 - lv), wv)
+            both = np.outer(obs, obs)
+            Sc = np.where(both, lc * Sc + (1 - lc) * np.outer(fz, fz), Sc)
+            wc = np.where(both, lc * wc + (1 - lc), wc)
+        return F, pd.DataFrame(rawvol, self.factor_returns.index, self.factor_returns.columns[Kc:])
 
     # ---------------- specific risk ---------------- #
     def specific_risk(self):
         cfg, fm = self.cfg, self.fm
         e = fm.expo
-        U = fm.resid.values
+        U = (fm.resid_after_slow if fm.resid_after_slow is not None else fm.resid).values   # slow risk is in F now
         T, N = U.shape
         ls, lb = _decay(cfg.specific_halflife), _decay(cfg.vra_halflife)
         S = np.zeros(N); w = np.zeros(N); n = np.zeros(N)
@@ -272,10 +358,14 @@ class RiskModelBuilder:
         return out, pd.Series(lam, index=fm.resid.index)
 
     def build(self) -> RiskModel:
-        F, vra, shrink, gam, rawvol = self.factor_covariance()
+        # core block estimated on core factors alone, so adding the slow layer leaves it unchanged
+        F, vra, shrink, gam, rawvol = self.factor_covariance(self.fm.factor_returns)
+        if self.factor_returns.shape[1] > F.shape[1]:
+            F, rawvol_slow = self.link_slow_block(F, shrink.values)
+            rawvol = pd.concat([rawvol, rawvol_slow], axis=1)
         spec, lam_s = self.specific_risk()
         e = self.fm.expo
-        return RiskModel(name=self.fm.name, dates=e.dates, factors=list(self.fm.factor_returns.columns),
-                         groups=e.groups, tickers=e.tickers, X=e.X, F=F, spec_var=spec, vra=vra,
+        return RiskModel(name=self.fm.name, dates=e.dates, factors=list(self.factor_returns.columns),
+                         groups=self.groups, tickers=e.tickers, X=self.X, F=F, spec_var=spec, vra=vra,
                          vra_specific=lam_s, shrinkage=shrink, eigen_gamma=gam, raw_factor_vol=rawvol,
-                         macro_mult=self.macro_mult)
+                         macro_mult=self.macro_mult, factor_returns=self.factor_returns)

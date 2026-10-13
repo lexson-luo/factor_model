@@ -25,11 +25,11 @@
 
 | strategy | mean_bias | within_band_pct | band | n_windows | realised_vol_ann | pred_vol_ann |
 |---|---|---|---|---|---|---|
-| A1_US_STATARB | 0.810 | 37.5% | 0.178 | 8 | 3.38m | 4.27m |
-| A2_CN_STATARB | 0.838 | 50.0% | 0.178 | 8 | 1.90m | 2.24m |
-| B1_US_INTRADAY | 0.838 | 62.5% | 0.178 | 8 | 0.46m | 0.55m |
+| A1_US_STATARB | 0.809 | 37.5% | 0.178 | 8 | 3.38m | 4.28m |
+| A2_CN_STATARB | 0.834 | 50.0% | 0.178 | 8 | 1.90m | 2.24m |
+| B1_US_INTRADAY | 0.837 | 62.5% | 0.178 | 8 | 0.46m | 0.55m |
 | C1_US_EVENT | 0.934 | 100.0% | 0.178 | 8 | 2.67m | 2.69m |
-| D1_US_CROWDING | 0.850 | 50.0% | 0.178 | 8 | 3.10m | 3.67m |
+| D1_US_CROWDING | 0.851 | 50.0% | 0.178 | 8 | 3.10m | 3.67m |
 | E1_CRYPTO_CARRY | 0.725 | 15.4% | 0.178 | 13 | 3.35m | 4.71m |
 
 ![bias](charts/bias_A1_US_STATARB.png)
@@ -44,6 +44,7 @@
 | industry | 1.089 | 73.7% |
 | market | 1.168 | 33.3% |
 | market_specific | 1.172 | 55.6% |
+| slow | 1.011 | 88.9% |
 | statistical | 0.746 | 18.8% |
 | style | 0.818 | 47.8% |
 | timeseries | 1.015 | 52.8% |
@@ -56,6 +57,7 @@
 | industry | 1.069 | 74.4% |
 | market | 1.218 | 55.6% |
 | market_specific | 1.037 | 50.0% |
+| slow | 0.997 | 97.8% |
 | statistical | 0.764 | 14.3% |
 | style | 0.829 | 61.1% |
 | timeseries | 0.992 | 31.1% |
@@ -74,8 +76,8 @@
 
 | index | mean_bias | within_band_pct | band | n_windows |
 |---|---|---|---|---|
-| US | 1.007 | 69.5% | 0.178 | 1,336 |
-| CN | 1.026 | 84.0% | 0.178 | 1,335 |
+| US | 1.019 | 70.1% | 0.178 | 1,336 |
+| CN | 1.050 | 82.0% | 0.178 | 1,335 |
 | CRYPTO | 1.103 | 58.2% | 0.178 | 600 |
 
 ## 3. Benchmark comparison (challengers)
@@ -473,34 +475,34 @@ Did forecasts flag the risk beforehand, and does attribution explain the loss af
 
 | episode | date | strategy | pred_vol_t-1 | pred_vol_month_before | forecast_rose_pct | hold_pnl | z_score | factor | specific | trading_and_costs | factor_share_of_loss |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Global carry-trade unwind | 2024-08-05 | A1_US_STATARB | 265,949 | 290,134 | -8.336 | -0.52m | -1.938 | -0.79m | 0.28m | -51,013 | 152.9% |
-| Global carry-trade unwind | 2024-08-05 | B1_US_INTRADAY | 45,373 | 33,316 | 36.190 | -80,709 | -1.779 | -0.12m | 40,899 | -0.32m | 151.9% |
-| Global carry-trade unwind | 2024-08-05 | C1_US_EVENT | 135,923 | 257,575 | -47.230 | 0.77m | 5.699 | 0.42m | 0.35m | -0.13m | – |
-| Global carry-trade unwind | 2024-08-05 | D1_US_CROWDING | 212,472 | 182,443 | 16.460 | -0.35m | -1.654 | -0.20m | -0.15m | -51,847 | 58.0% |
-| Quant deleveraging | 2025-03-11 | A1_US_STATARB | 177,443 | 227,047 | -21.847 | -0.34m | -1.899 | -0.23m | -0.12m | -0.13m | 69.1% |
-| Quant deleveraging | 2025-03-11 | B1_US_INTRADAY | 31,480 | 29,584 | 6.407 | -49,593 | -1.575 | -37,423 | -11,210 | -0.16m | 75.5% |
-| Quant deleveraging | 2025-03-11 | C1_US_EVENT | 201,002 | 179,843 | 11.765 | 0.18m | 0.879 | 0.25m | -56,413 | -92 | – |
-| Quant deleveraging | 2025-03-11 | D1_US_CROWDING | 188,858 | 191,411 | -1.334 | -0.48m | -2.541 | -0.40m | -86,924 | -21,111 | 83.0% |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | A1_US_STATARB | 252,002 | 288,851 | -12.757 | -0.40m | -1.590 | -0.34m | -28,425 | -0.21m | 83.8% |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | B1_US_INTRADAY | 38,131 | 36,260 | 5.161 | -0.10m | -2.726 | -0.11m | 8,487 | -0.51m | 108.1% |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | C1_US_EVENT | 226,595 | 225,365 | 0.546 | 0.61m | 2.697 | 0.43m | 0.19m | -693 | – |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | D1_US_CROWDING | 217,160 | 241,237 | -9.980 | 0.69m | 3.174 | 0.78m | -68,663 | -43,482 | – |
-| Crypto liquidation cascade | 2025-10-10 | A1_US_STATARB | 260,543 | 234,603 | 11.057 | -1.01m | -3.876 | -1.09m | 92,511 | 40,814 | 108.1% |
-| Crypto liquidation cascade | 2025-10-10 | B1_US_INTRADAY | 30,540 | 32,673 | -6.528 | -0.13m | -4.419 | -0.16m | 29,499 | 62,927 | 120.5% |
-| Crypto liquidation cascade | 2025-10-10 | C1_US_EVENT | 151,447 | 169,774 | -10.795 | 90,070 | 0.595 | -0.11m | 0.17m | -1,014 | – |
-| Crypto liquidation cascade | 2025-10-10 | D1_US_CROWDING | 189,244 | 210,052 | -9.906 | -0.59m | -3.102 | -0.51m | -70,153 | -31,936 | 87.3% |
-| Momentum/value rotation | 2025-11-10 | A1_US_STATARB | 317,416 | 365,424 | -13.138 | -0.13m | -0.406 | -71,993 | 36,681 | -0.16m | 55.9% |
-| Momentum/value rotation | 2025-11-10 | B1_US_INTRADAY | 43,116 | 40,066 | 7.614 | 63,107 | 1.464 | 23,655 | 25,831 | 0.34m | – |
-| Momentum/value rotation | 2025-11-10 | C1_US_EVENT | 160,110 | 187,316 | -14.524 | 0.22m | 1.358 | 0.17m | 0.13m | -12,124 | – |
-| Momentum/value rotation | 2025-11-10 | D1_US_CROWDING | 274,129 | 268,897 | 1.945 | 0.34m | 1.244 | 0.16m | 0.22m | 3,011 | – |
-| Retail short squeeze | 2026-01-27 | A1_US_STATARB | 314,852 | 249,499 | 26.193 | 0.22m | 0.697 | -0.16m | 0.39m | -45,818 | – |
-| Retail short squeeze | 2026-01-27 | B1_US_INTRADAY | 39,737 | 31,926 | 24.465 | 43,868 | 1.104 | 15,501 | 18,407 | -57,867 | – |
-| Retail short squeeze | 2026-01-27 | C1_US_EVENT | 694,712 | 124,818 | 457 | 1.03m | 1.479 | 0.55m | 0.51m | -0.22m | – |
-| Retail short squeeze | 2026-01-27 | D1_US_CROWDING | 254,355 | 232,130 | 9.574 | -0.17m | -0.688 | -0.14m | 3,647 | -9,240 | 80.6% |
-| Global carry-trade unwind | 2024-08-05 | A2_CN_STATARB | 109,390 | 112,378 | -2.658 | 95,921 | 0.877 | -79,972 | 0.18m | -97,916 | – |
-| Quant deleveraging | 2025-03-11 | A2_CN_STATARB | 85,610 | 141,828 | -39.638 | 38,793 | 0.453 | 58,116 | -12,618 | -96,384 | – |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | A2_CN_STATARB | 127,326 | 144,271 | -11.745 | -0.16m | -1.240 | -43,463 | -0.11m | -67,013 | 27.5% |
-| Momentum/value rotation | 2025-11-10 | A2_CN_STATARB | 168,016 | 140,215 | 19.827 | -22,307 | -0.133 | 11,811 | -11,816 | -63,174 | -52.9% |
+| Global carry-trade unwind | 2024-08-05 | A1_US_STATARB | 266,145 | 289,991 | -8.223 | -0.52m | -1.937 | -0.79m | 0.28m | -51,013 | 152.9% |
+| Global carry-trade unwind | 2024-08-05 | B1_US_INTRADAY | 45,442 | 33,316 | 36.397 | -80,709 | -1.776 | -0.12m | 40,899 | -0.32m | 151.9% |
+| Global carry-trade unwind | 2024-08-05 | C1_US_EVENT | 135,955 | 257,179 | -47.136 | 0.77m | 5.697 | 0.42m | 0.35m | -0.13m | – |
+| Global carry-trade unwind | 2024-08-05 | D1_US_CROWDING | 213,567 | 182,779 | 16.844 | -0.35m | -1.646 | -0.20m | -0.15m | -51,847 | 58.0% |
+| Quant deleveraging | 2025-03-11 | A1_US_STATARB | 180,003 | 227,435 | -20.855 | -0.34m | -1.872 | -0.23m | -0.12m | -0.13m | 69.1% |
+| Quant deleveraging | 2025-03-11 | B1_US_INTRADAY | 31,566 | 29,608 | 6.614 | -49,593 | -1.571 | -37,423 | -11,210 | -0.16m | 75.5% |
+| Quant deleveraging | 2025-03-11 | C1_US_EVENT | 199,578 | 179,584 | 11.133 | 0.18m | 0.885 | 0.25m | -56,413 | -92 | – |
+| Quant deleveraging | 2025-03-11 | D1_US_CROWDING | 189,008 | 191,654 | -1.381 | -0.48m | -2.539 | -0.40m | -86,924 | -21,111 | 83.0% |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | A1_US_STATARB | 253,820 | 289,259 | -12.252 | -0.40m | -1.579 | -0.34m | -28,425 | -0.21m | 83.8% |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | B1_US_INTRADAY | 38,375 | 36,223 | 5.941 | -0.10m | -2.709 | -0.11m | 8,487 | -0.51m | 108.1% |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | C1_US_EVENT | 222,454 | 222,833 | -0.170 | 0.61m | 2.747 | 0.43m | 0.19m | -693 | – |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | D1_US_CROWDING | 217,536 | 241,074 | -9.764 | 0.69m | 3.169 | 0.78m | -68,663 | -43,482 | – |
+| Crypto liquidation cascade | 2025-10-10 | A1_US_STATARB | 260,631 | 234,726 | 11.037 | -1.01m | -3.875 | -1.09m | 92,511 | 40,814 | 108.1% |
+| Crypto liquidation cascade | 2025-10-10 | B1_US_INTRADAY | 30,800 | 32,661 | -5.699 | -0.13m | -4.382 | -0.16m | 29,499 | 62,927 | 120.5% |
+| Crypto liquidation cascade | 2025-10-10 | C1_US_EVENT | 151,481 | 169,859 | -10.819 | 90,070 | 0.595 | -0.11m | 0.17m | -1,014 | – |
+| Crypto liquidation cascade | 2025-10-10 | D1_US_CROWDING | 189,921 | 209,702 | -9.433 | -0.59m | -3.091 | -0.51m | -70,153 | -31,936 | 87.3% |
+| Momentum/value rotation | 2025-11-10 | A1_US_STATARB | 318,472 | 366,127 | -13.016 | -0.13m | -0.405 | -71,993 | 36,681 | -0.16m | 55.9% |
+| Momentum/value rotation | 2025-11-10 | B1_US_INTRADAY | 43,298 | 40,152 | 7.837 | 63,107 | 1.458 | 23,655 | 25,831 | 0.34m | – |
+| Momentum/value rotation | 2025-11-10 | C1_US_EVENT | 160,019 | 187,515 | -14.663 | 0.22m | 1.359 | 0.17m | 0.13m | -12,124 | – |
+| Momentum/value rotation | 2025-11-10 | D1_US_CROWDING | 273,355 | 268,627 | 1.760 | 0.34m | 1.248 | 0.16m | 0.22m | 3,011 | – |
+| Retail short squeeze | 2026-01-27 | A1_US_STATARB | 315,451 | 250,056 | 26.152 | 0.22m | 0.696 | -0.16m | 0.39m | -45,818 | – |
+| Retail short squeeze | 2026-01-27 | B1_US_INTRADAY | 39,733 | 31,950 | 24.357 | 43,868 | 1.104 | 15,501 | 18,407 | -57,867 | – |
+| Retail short squeeze | 2026-01-27 | C1_US_EVENT | 691,025 | 124,227 | 456 | 1.03m | 1.487 | 0.55m | 0.51m | -0.22m | – |
+| Retail short squeeze | 2026-01-27 | D1_US_CROWDING | 254,276 | 231,677 | 9.754 | -0.17m | -0.688 | -0.14m | 3,647 | -9,240 | 80.6% |
+| Global carry-trade unwind | 2024-08-05 | A2_CN_STATARB | 109,357 | 112,575 | -2.859 | 95,921 | 0.877 | -79,972 | 0.18m | -97,916 | – |
+| Quant deleveraging | 2025-03-11 | A2_CN_STATARB | 85,559 | 142,307 | -39.877 | 38,793 | 0.453 | 58,116 | -12,618 | -96,384 | – |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | A2_CN_STATARB | 131,427 | 145,403 | -9.612 | -0.16m | -1.201 | -43,463 | -0.11m | -67,013 | 27.5% |
+| Momentum/value rotation | 2025-11-10 | A2_CN_STATARB | 168,200 | 140,261 | 19.919 | -22,307 | -0.133 | 11,811 | -11,816 | -63,174 | -52.9% |
 | Global carry-trade unwind | 2024-08-05 | E1_CRYPTO_CARRY | 264,988 | 234,087 | 13.201 | 0.69m | 2.599 | -0.46m | 1.15m | -0.42m | – |
 | Tariff shock / CN limit-down cascade | 2025-04-07 | E1_CRYPTO_CARRY | 253,982 | 245,466 | 3.469 | 0.22m | 0.876 | 0.18m | 40,011 | 50,993 | – |
 | Crypto liquidation cascade | 2025-10-10 | E1_CRYPTO_CARRY | 345,680 | 245,387 | 40.872 | 0.29m | 0.848 | 38,744 | 0.25m | -90,673 | – |
@@ -513,9 +515,9 @@ Bar-level bias statistics of start-of-bar holdings P&L. With the U-shaped profil
 
 | strategy | mean_seasonal | dispersion_seasonal | mean_flat | dispersion_flat |
 |---|---|---|---|---|
-| A1_US_STATARB | 0.722 | 0.043 | 0.714 | 0.142 |
-| B1_US_INTRADAY | 0.755 | 0.055 | 0.749 | 0.164 |
-| C1_US_EVENT | 0.761 | 0.087 | 0.753 | 0.156 |
+| A1_US_STATARB | 0.718 | 0.042 | 0.711 | 0.142 |
+| B1_US_INTRADAY | 0.754 | 0.056 | 0.748 | 0.164 |
+| C1_US_EVENT | 0.757 | 0.087 | 0.749 | 0.155 |
 | D1_US_CROWDING | 0.727 | 0.084 | 0.714 | 0.124 |
 
 ![seasonality](charts/seasonality_bias_A1.png)

@@ -50,7 +50,8 @@ def hypothetical_scenarios(att: AttributionResult, models: dict, risk: dict,
         vol = rm.factor_vol(tt)
         xs = None
         if fm.X_slow_perp is not None:
-            xs = pd.Series(np.nan_to_num(fm.expo.X_slow[tt]).T @ h, index=fm.expo.slow_factors)
+            # exposures to the part of each slow factor the core cannot explain - what slow_returns is the return to
+            xs = pd.Series(np.nan_to_num(fm.X_slow_perp[tt]).T @ h, index=fm.expo.slow_factors)
             slow_vol = fm.slow_returns.iloc[-250:].std()
         cm = crowding_mult.get(b.market, {})
         for name, sc in scenarios.items():

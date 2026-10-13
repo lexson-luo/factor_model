@@ -125,7 +125,7 @@ def run(data_dir: Path = DATA_DIR, out_dir: Path = OUTPUT_DIR, write_reports: bo
     log("Global layer")
     cal = pd.bdate_range(us.dates[0], us.dates[-1])
     usd_per_cny = cn.usd_per_local
-    glayer = GlobalRiskLayer(risk, {m: models[m].factor_returns for m in models}, usd_per_cny, cal).build()
+    glayer = GlobalRiskLayer(risk, {m: risk[m].factor_returns for m in risk}, usd_per_cny, cal).build()
     start = pd.Timestamp(td.official_pnl.date.min())
     res.glayer = glayer
     res.firm_risk, res.firm_risk_last = firm_risk_history(att, risk, glayer, start)
