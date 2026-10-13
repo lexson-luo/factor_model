@@ -282,3 +282,68 @@ def test_two_sided_shap_attribution_is_exact_and_recovers_factor_pnl():
     true = pd.Series(h * f[t] * x).groupby(t).sum()
     assert np.corrcoef(ret_side.st_reversal, true)[0, 1] > 0.8
     assert ret_side["size"].abs().sum() < 0.3 * ret_side.st_reversal.abs().sum()
+
+
+def test_wls_projection_reproduces_constrained_regression():
+    from factor_framework.estimation import wls_projection
+    rng = np.random.default_rng(6)
+    n, n_ind = 300, 5
+    ind = rng.integers(0, n_ind, n)
+    X = np.column_stack([np.ones(n), np.eye(n_ind)[ind], rng.normal(size=(n, 3))])
+    w, cap = rng.lognormal(size=n), rng.lognormal(size=n)
+    ind_idx = list(range(1, 1 + n_ind))
+    ind_cap = np.zeros(X.shape[1]); ind_cap[ind_idx] = [cap[ind == j].sum() for j in range(n_ind)]
+    active = np.ones(X.shape[1], bool)
+    y = rng.normal(0, 0.02, n)
+    f, *_ = constrained_wls(y, X, w, ind_idx, ind_cap, active)
+    np.testing.assert_allclose(wls_projection(X, w, ind_idx, ind_cap, active) @ y, f, atol=1e-12)
+
+
+@needs_data
+def test_resimulation_reproduces_truth_files():
+    from factor_framework.calibration import _resimulate
+    from factor_framework.synthetic_data import SimConfig
+    cs, _, us, cn = _resimulate(SimConfig())
+    for sim in (us, cn):
+        tr = pd.read_csv(DATA_DIR / f"truth/factor_returns_{sim.spec.code}.csv", index_col=0, parse_dates=True)
+        np.testing.assert_allclose((sim.F_on + sim.F_id).values, tr[sim.fac_names].values, atol=1e-12)
+    tr = pd.read_csv(DATA_DIR / "truth/factor_returns_CRYPTO.csv", index_col=0, parse_dates=True)
+    np.testing.assert_allclose(cs.F.values, tr.values, atol=1e-12)
+
+
+@needs_data_module
+def test_noise_loadings_map_returns_to_factor_returns(us_model):
+    """Estimated cross-sectional factor returns are Q_t y_t, y = robust-clipped r - B g on the regression rows."""
+    from factor_framework.estimation import _robust_clip, ts_component
+    _, fm = us_model
+    e = fm.expo
+    Q = fm.extras["noise_loadings"]
+    _, Bg = ts_component(e)
+    Y = (fm.returns - Bg.reindex_like(fm.returns)).reindex(index=e.dates, columns=e.tickers).values
+    cols = [k for k, f in enumerate(e.factors) if e.groups[f] not in ("timeseries", "statistical")]
+    for t in range(len(e.dates) - 20, len(e.dates)):
+        rows = np.abs(Q[t][cols]).sum(0) > 0
+        y = np.zeros(len(e.tickers)); y[rows] = _robust_clip(Y[t][rows])
+        f = fm.factor_returns.values[t, cols]
+        ok = np.isfinite(f)
+        assert np.abs(Q[t][cols].astype(float) @ y - f)[ok].max() < 1e-6
+
+
+@needs_data_module
+def test_denoised_factor_covariance_and_leverage_adjustment(us_model):
+    from dataclasses import replace
+    from factor_framework.config import MODEL
+    from factor_framework.risk_model import RiskModelBuilder
+    _, fm = us_model
+    cfg = replace(MODEL, eigen_scale=0.0, vra_factor=False, macro_mult_cap=1.0, denoise_factor_cov=False)
+    raw = RiskModelBuilder(fm, cfg).build()
+    b = RiskModelBuilder(fm, replace(cfg, denoise_factor_cov=True))
+    den = b.build()
+    t, K = len(fm.expo.dates) - 2, len(fm.factor_returns.columns)
+    d_raw, d_den = np.diag(raw.F[t])[:K], np.diag(den.F[t])[:K]
+    assert np.all(d_den <= d_raw * (1 + 1e-9)) and d_den.sum() < d_raw.sum()
+    assert np.linalg.eigvalsh(den.F[t]).min() > 0
+    assert den.noise_var[t].sum() > 0
+    estu = fm.expo.estu.values[t]
+    kap = b.leverage_ratio(t, np.full(len(fm.expo.tickers), 0.02 ** 2))
+    assert kap[estu].mean() < 1.0                  # regression residuals understate specific variance

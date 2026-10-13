@@ -32,12 +32,8 @@ def _robust_clip(y: np.ndarray, k: float = 6.0) -> np.ndarray:
     return np.clip(y, med - k * mad, med + k * mad) if mad > 0 else y
 
 
-def constrained_wls(y, X, w, ind_idx, ind_cap, active):
-    """WLS with sum_j cap_j f_j = 0 over active industries.
-
-    Returns (f [K], se [K], r2, s2). Inactive factors get f = 0, se = NaN.
-    """
-    K = X.shape[1]
+def _constraint_basis(K, ind_idx, ind_cap, active):
+    """f = R g: free parameters g for the active factors, last active industry implied by the constraint."""
     act = np.where(active)[0]
     ind_act = [k for k in ind_idx if active[k]]
     if len(ind_act) >= 2:
@@ -51,6 +47,23 @@ def constrained_wls(y, X, w, ind_idx, ind_cap, active):
     else:
         free = list(act)
         R = np.eye(K)[:, free]
+    return R, free
+
+
+def wls_projection(X, w, ind_idx, ind_cap, active):
+    """P (K x n) with f = P y for constrained_wls (ignoring the robust clip of y)."""
+    R, _ = _constraint_basis(X.shape[1], ind_idx, ind_cap, active)
+    sw = np.sqrt(w)
+    return R @ np.linalg.pinv((X @ R) * sw[:, None]) * sw[None, :]
+
+
+def constrained_wls(y, X, w, ind_idx, ind_cap, active):
+    """WLS with sum_j cap_j f_j = 0 over active industries.
+
+    Returns (f [K], se [K], r2, s2). Inactive factors get f = 0, se = NaN.
+    """
+    K = X.shape[1]
+    R, free = _constraint_basis(K, ind_idx, ind_cap, active)
     sw = np.sqrt(w)
     A = (X @ R) * sw[:, None]
     g, *_ = np.linalg.lstsq(A, y * sw, rcond=None)
@@ -73,6 +86,7 @@ class RegressionOutput:
     r2: pd.Series
     tstats: pd.DataFrame
     n_obs: pd.Series
+    projection: np.ndarray | None = None      # T x K x N: f_t = P_t r_t (zero outside the regression)
 
 
 class CrossSectionalRegression:
@@ -80,7 +94,7 @@ class CrossSectionalRegression:
         self.e, self.cfg = expo, cfg
 
     def fit(self, returns: pd.DataFrame, factors: list | None = None, min_obs: int = 15,
-            t_start: int = 0) -> RegressionOutput:
+            t_start: int = 0, keep_projection: bool = False) -> RegressionOutput:
         e = self.e
         factors = factors or e.cs_factors()
         kidx = e.idx(factors)
@@ -90,6 +104,7 @@ class CrossSectionalRegression:
         T, N, K = len(e.dates), len(e.tickers), len(factors)
         F = np.full((T, K), np.nan); Tst = np.full((T, K), np.nan)
         U = np.full((T, N), np.nan); r2 = np.full(T, np.nan); nobs = np.zeros(T, int)
+        P = np.zeros((T, K, N), np.float32) if keep_projection else None
         for t in range(t_start, T):
             Xt = e.X[t][:, kidx]
             rt = R[t]
@@ -113,6 +128,8 @@ class CrossSectionalRegression:
             for j in ind_idx:
                 ind_cap[j] = C[t][ok][X[:, j] > 0].sum()
             f, se, r2[t], _ = constrained_wls(y, X, w, ind_idx, ind_cap, active)
+            if keep_projection:
+                P[t][:, ok] = wls_projection(X, w, ind_idx, ind_cap, active) * active[:, None]
             f_out = f.copy()
             f_out[~active] = np.nan          # not estimable today (e.g. no events) -> missing, not zero
             F[t] = f_out
@@ -125,7 +142,7 @@ class CrossSectionalRegression:
             factor_returns=pd.DataFrame(F, index=idx, columns=factors),
             resid=pd.DataFrame(U, index=idx, columns=e.tickers),
             r2=pd.Series(r2, index=idx), tstats=pd.DataFrame(Tst, index=idx, columns=factors),
-            n_obs=pd.Series(nobs, index=idx))
+            n_obs=pd.Series(nobs, index=idx), projection=P)
 
 
 class StatisticalResidualFactors:
@@ -141,6 +158,7 @@ class StatisticalResidualFactors:
         E, W = expo.estu.values, np.nan_to_num(expo.reg_weight.values)
         Xs = np.full((T, N, k), np.nan)
         Fs = np.full((T, k), np.nan)
+        self.projection = np.zeros((T, k, N), np.float32)        # f_stat,t = P_t u_t (named residuals)
         U2 = U.copy()
         var_share = np.full((T, k), np.nan)
         prev = None
@@ -187,6 +205,7 @@ class StatisticalResidualFactors:
             sw = np.sqrt(W[t][ok])
             f, *_ = np.linalg.lstsq(z[ok] * sw[:, None], U[t][ok] * sw, rcond=None)
             Fs[t] = f
+            self.projection[t][:, ok] = np.linalg.pinv(z[ok] * sw[:, None]) * sw[None, :]
             v = np.isfinite(U[t]) & alive
             U2[t, v] = U[t, v] - z[v] @ f
         names = [f"stat_{j + 1}" for j in range(k)]
@@ -262,17 +281,41 @@ def ts_component(expo: ExposureSet) -> tuple[pd.DataFrame, pd.DataFrame]:
     return G, pd.DataFrame(Bg, index=expo.dates, columns=expo.tickers)
 
 
+def noise_loadings(expo: ExposureSet, cs_cols: list, Xcs: np.ndarray, P_cs: np.ndarray,
+                   P_stat: np.ndarray | None) -> np.ndarray:
+    """Q (T x K x N): estimated factor returns are signal + Q_t e_t, with e the specific returns.
+
+    Cross-sectional factors: the WLS projection.  Statistical factors: their projection applied
+    to the named residual, (I - X P) e.  Time-series factors: 0 (their shocks are observed).
+    Q_t diag(spec var) Q_t' is the sampling noise in each day's factor returns, which a covariance
+    estimated from those returns counts as factor risk although it is specific risk."""
+    T, N, K = len(expo.dates), len(expo.tickers), len(expo.factors)
+    Q = np.zeros((T, K, N), np.float32)
+    Q[:, expo.idx(cs_cols)] = P_cs
+    if P_stat is not None:
+        stat = expo.idx(expo.factors_in("statistical"))
+        for t in range(T):
+            if P_stat[t].any():
+                Q[t, stat] = P_stat[t] @ (np.eye(N) - Xcs[t] @ P_cs[t])
+    return Q
+
+
 def estimate_local_model(name: str, expo: ExposureSet, returns: pd.DataFrame,
                          ret_on: pd.DataFrame | None = None, ret_id: pd.DataFrame | None = None,
                          cfg: ModelConfig = MODEL, n_stat: int | None = None) -> FactorModel:
     reg = CrossSectionalRegression(expo, cfg)
     G, Bg = ts_component(expo)
-    named = reg.fit(returns - Bg.reindex_like(returns))
+    named = reg.fit(returns - Bg.reindex_like(returns), keep_projection=True)
     f_on = reg.fit(ret_on).factor_returns if ret_on is not None else None
     f_id = reg.fit(ret_id).factor_returns if ret_id is not None else None
     k = cfg.n_stat_factors if n_stat is None else n_stat
+    cs_cols = list(named.factor_returns.columns)
+    Xcs = np.nan_to_num(expo.X[:, :, expo.idx(cs_cols)])
+    stat_proj = None
     if k > 0:
-        Xs, Fs, U2, vs = StatisticalResidualFactors(k, cfg.stat_factor_window).fit(expo, named.resid)
+        srf = StatisticalResidualFactors(k, cfg.stat_factor_window)
+        Xs, Fs, U2, vs = srf.fit(expo, named.resid)
+        stat_proj = srf.projection
         # a stock with named exposures but no statistical loading yet has zero stat exposure
         has_named = np.all(np.isfinite(expo.X), 2)
         Xs = np.where(has_named[..., None] & ~np.isfinite(Xs), 0.0, Xs)
@@ -293,6 +336,7 @@ def estimate_local_model(name: str, expo: ExposureSet, returns: pd.DataFrame,
                      resid_named=named.resid, r2_named=named.r2, r2_hybrid=r2_h,
                      tstats=named.tstats, stat_var_share=vs, f_overnight=f_on, f_intraday=f_id)
     fm.extras["ts_explained"] = Bg
+    fm.extras["noise_loadings"] = noise_loadings(expo, cs_cols, Xcs, named.projection, stat_proj)
     if expo.X_slow is not None:
         g, Xp, e = SlowFactorLayer().fit(expo, U2)
         fm.slow_returns, fm.X_slow_perp, fm.resid_after_slow = g, Xp, e

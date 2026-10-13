@@ -8,6 +8,7 @@ everything the framework consumes.
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python generate_data.py     # ~20 s: writes raw datasets to ./data
 .venv/bin/python run_framework.py     # ~65 s: runs layers 1-7 and writes ./output
+.venv/bin/python run_calibration.py   # ~10 min: risk forecasts vs the simulator's true covariance
 .venv/bin/python -m pytest -q tests
 ```
 
@@ -22,12 +23,13 @@ sensitivities `B` are estimated. A few statistical residual factors catch what n
 | 1. Data | `data_loader.py` | Corporate-action adjustment, suspensions, FX, point-in-time short interest, borrow availability/utilisation, fundamentals, ETF and 13F ownership; builds the observed shock series per market (implied-vol change, liquidity shock from aggregate spread and depth, currency, rates futures, prior US session) |
 | 2. Exposures | `exposures.py` | Short-horizon descriptors with MAD winsorisation and cap-weighted standardisation; liquidity includes relative tick size; five-input short-side crowding composite; events (earnings, index rebalances, option expiry, corporate actions, in-play flag); time-series betas shrunk toward the industry average; candidate and background-monitor exposures |
 | 3. Factor returns | `estimation.py` | Removes `B g`, then runs daily WLS with a cap-weighted industry constraint; overnight/intraday regressions; statistical residual factors; second-stage slow-factor regression (monitoring layer) |
-| 4. Risk model | `risk_model.py` | EWMA covariance including the shock series, Ledoit-Wolf shrinkage (capped), overlap-weighted pairwise correlations, eigenfactor adjustment, volatility regime adjustment, macro-announcement uplift, structural specific risk with event-day uplift (earnings, in-play) |
+| 4. Risk model | `risk_model.py` | EWMA covariance including the shock series, de-noised of factor-return sampling noise, Ledoit-Wolf shrinkage (capped), overlap-weighted pairwise correlations, eigenfactor adjustment, volatility regime adjustment, per-factor macro-announcement uplift, leverage-adjusted structural specific risk with event-day uplift (earnings, in-play) |
 | 5. Attribution | `attribution.py` | Factor (incl. time-series), slow-factor, specific, FX, trading at decision price, delay/impact, fees, financing, borrow, funding; reconciliation to official P&L; Carino linking; returns-based cross-check |
 | Intraday | `intraday.py` | Index futures as the intraday market factor, using Dimson (lag-corrected) intraday betas against the Epps bias; bar-level factor returns; order-flow imbalance factor (attribution only); seasonality-normalised bar risk; macro release bars; reconciles to daily |
 | Global | `global_layer.py` | Cross-model covariance of US, CN, crypto and CNY with a Newey-West lag term; firm-level risk |
 | 6. Diagnostics | `diagnostics.py` | ML surrogate (XGBoost on position weights, explained with exact TreeSHAP and SHAP interaction values, benchmarked in and out of sample against a linear model); SHAP attribution cross-check from a per-date return surrogate, compared bucket by bucket with the linear attribution), overlap and effective bets, regimes, missing-factor tests, drift, model releases; **factor-level crowding** (comomentum, short interest in the short leg); **shock sensitivities** (model-implied and rolling empirical) |
 | Validation | `validation.py` | Bias statistics, R², VIF, stability, challengers, truth recovery, event replay; **factor selection tests** (drop-one / add-one, affected-stock R² for events, variance explained for time-series factors); time-series beta stability and shrinkage |
+| Calibration | `calibration.py` | Synthetic data only: rebuilds the simulator's true conditional covariance and compares forecasts with it for strategy books, random, cap-weighted and model-optimised portfolios; layer ablation; parameter tuning on a fit half with a held-out half (`run_calibration.py` → `calibration_report.md`) |
 | Stress & limits | `stress.py`, `limits.py` | Hypothetical scenarios including vol, liquidity, FX, rates and prior-session shocks, scaled up for crowded factors; historical and model-free replays; liquidity stress; **internal crowding** (firm exit cost vs standalone); limits including expected loss in a 3-sigma vol/liquidity shock (worse of model and empirical) |
 | 7. Reporting | `reporting.py` | `risk_report.md`, `pm_report.md`, `management_summary.md`, `validation_report.md`, plus charts and CSV tables |
 

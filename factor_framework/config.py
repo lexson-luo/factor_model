@@ -193,14 +193,21 @@ class ModelConfig:
     corr_halflife: int = 84            # longer half-life for correlations
     specific_halflife: int = 42
     vra_halflife: int = 21             # volatility regime adjustment
-    lw_max: float = 0.25               # cap on Ledoit-Wolf intensity: keep the few strong correlations
-                                       # (e.g. reversal vs vol shocks); eigen adjustment handles noise
+    vra_factor: bool = True            # apply the regime adjustment to factor covariance
+    vra_specific: bool = True          # ... and to specific risk
+    lw_max: float = 0.4                # cap on Ledoit-Wolf intensity; 0-1 all within +-0.002 truth error,
+                                       # 0.4 best on the held-out half and realised Q (run_calibration.py)
     eigen_sims: int = 60
     eigen_scale: float = 1.4           # USE4 'a' coefficient
     eigen_every: int = 5               # recompute eigen adjustment every k days
     event_specific_mult: float = 3.0   # extra specific vol on known event days
     cov_min_obs: int = 60
-    macro_mult_cap: float = 3.0        # cap on macro-day variance uplift
+    macro_mult_cap: float = 6.0        # cap on macro-day variance uplift (US rates ~6x on macro days)
+    macro_per_factor: bool = True      # one uplift per macro-sensitive factor instead of the market's for all
+    macro_prior_obs: float = 10.0      # pseudo macro days shrinking each per-factor uplift toward 1
+    denoise_factor_cov: bool = True    # remove factor-return sampling noise (Q D Q') from F
+    denoise_floor: float = 0.2         # keep at least this share of each raw EWMA variance
+    specific_leverage_adj: bool = True    # specific risk from residuals scaled by var(e)/var(residual)
     # time-series shock betas
     ts_beta_halflife: int = 63
     ts_min_obs: int = 60

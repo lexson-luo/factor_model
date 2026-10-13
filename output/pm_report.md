@@ -50,7 +50,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 **Intraday beta at peak position** (per $ gross): concurrent 30-minute -0.002, lag-corrected (Dimson) +0.015, daily +0.012. A gap between the first two is the Epps effect.
 
-**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model +28k / empirical -231k; liq_shock model -21k / empirical -214k; fx model -62k / empirical -14k; rates model -36k / empirical -53k
+**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model +39k / empirical -231k; liq_shock model -16k / empirical -214k; fx model -66k / empirical -14k; rates model -51k / empirical -53k
 
 **Candidate / background monitor exposures** (std units per $ gross, not attributed): hf_ownership_13f -0.03
 
@@ -58,8 +58,8 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| st_reversal | 19.65m | 29.4% | 13.7% | optimizer constraint |
-| liquidity | -15.13m | 7.4% | 4.1% | optimizer constraint |
+| st_reversal | 19.65m | 17.1% | 8.7% | optimizer constraint |
+| liquidity | -15.13m | 6.1% | 3.3% | optimizer constraint |
 
 **What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; R² 0.33 in sample, 0.23 out of sample on the last 30% of dates)
 
@@ -172,14 +172,14 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 
 **Execution costs:** 10.60 bps of 7.5bn traded (delay -3.78, impact 10.27, fees 4.10 bps).
 
-**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -34k / empirical -85k; liq_shock model -25k / empirical -70k; fx model +44k / empirical +9k; rates model -9k / empirical -9k; us_session model +28k / empirical -34k
+**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -32k / empirical -85k; liq_shock model -21k / empirical -70k; fx model +60k / empirical +9k; rates model -27k / empirical -9k; us_session model +23k / empirical -34k
 
 **Hedging / neutralisation candidates**
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| size | -9.09m | 33.8% | 19.1% | optimizer constraint |
-| st_reversal | 7.86m | 19.7% | 7.0% | optimizer constraint |
+| size | -9.09m | 33.5% | 19.3% | optimizer constraint |
+| st_reversal | 7.86m | 15.0% | 8.8% | optimizer constraint |
 
 **What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; R² 0.55 in sample, 0.48 out of sample on the last 30% of dates)
 
@@ -304,7 +304,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 **Intraday beta at peak position** (per $ gross): concurrent 30-minute -0.015, lag-corrected (Dimson) +0.046, daily -0.006. A gap between the first two is the Epps effect.
 
-**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -35k / empirical -100k; liq_shock model -9k / empirical -55k; fx model -4k / empirical +0k; rates model -3k / empirical -3k
+**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -36k / empirical -100k; liq_shock model -8k / empirical -55k; fx model -4k / empirical +0k; rates model -1k / empirical -3k
 
 **Candidate / background monitor exposures** (std units per $ gross, not attributed): hf_ownership_13f +0.07
 
@@ -312,8 +312,8 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| size | -5.06m | 39.2% | 22.8% | optimizer constraint |
-| volatility | 2.52m | 11.0% | 6.8% | optimizer constraint |
+| size | -5.06m | 42.0% | 26.3% | optimizer constraint |
+| volatility | 2.52m | 10.7% | 7.0% | optimizer constraint |
 
 **Model release comparison (20 days before vs after)**
 
@@ -380,7 +380,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 **Intraday beta at peak position** (per $ gross): concurrent 30-minute -0.050, lag-corrected (Dimson) -0.051, daily -0.018. A gap between the first two is the Epps effect.
 
-**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model +14k / empirical +105k; liq_shock model -2k / empirical +93k; fx model -13k / empirical -21k; rates model +7k / empirical -59k
+**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model +17k / empirical +105k; liq_shock model -3k / empirical +93k; fx model -13k / empirical -21k; rates model +2k / empirical -59k
 
 **Candidate / background monitor exposures** (std units per $ gross, not attributed): hf_ownership_13f -0.04
 
@@ -388,8 +388,8 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| size | 5.11m | 4.3% | 2.3% | optimizer constraint |
-| liquidity | -5.20m | 1.9% | 1.2% | optimizer constraint |
+| size | 5.11m | 3.8% | 1.8% | optimizer constraint |
+| liquidity | -5.20m | 1.5% | 1.0% | optimizer constraint |
 
 **What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; R² 0.42 in sample, -0.10 out of sample on the last 30% of dates)
 
@@ -514,7 +514,7 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 **Intraday beta at peak position** (per $ gross): concurrent 30-minute -0.043, lag-corrected (Dimson) -0.014, daily -0.024. A gap between the first two is the Epps effect.
 
-**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -105k / empirical -101k; liq_shock model -39k / empirical -66k; fx model -49k / empirical -20k; rates model -24k / empirical -39k
+**Market-wide shock sensitivity (3-sigma, USD):** vol_shock model -107k / empirical -101k; liq_shock model -32k / empirical -66k; fx model -43k / empirical -20k; rates model -30k / empirical -39k
 
 **Candidate / background monitor exposures** (std units per $ gross, not attributed): hf_ownership_13f -0.39
 
@@ -522,8 +522,8 @@ Intraday vs daily reconciliation: max |diff| $0 per day. Futures = index-futures
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| crowding | -40.63m | 26.0% | 13.4% | optimizer constraint |
-| volatility | 24.66m | 23.7% | 12.6% | optimizer constraint |
+| volatility | 24.66m | 25.0% | 14.4% | optimizer constraint |
+| crowding | -40.63m | 19.7% | 10.6% | optimizer constraint |
 
 **What the model is effectively selecting on** (XGBoost surrogate of position weight / GMV; R² 0.72 in sample, 0.61 out of sample on the last 30% of dates)
 
@@ -640,8 +640,8 @@ Decision view (weight-side SHAP: P&L of the slice of the book each characteristi
 
 | factor | exposure_usd_per_unit | risk_contrib_pct | vol_reduction_pct | suggested_tool |
 |---|---|---|---|---|
-| funding | -9.96m | 43.4% | 23.7% | optimizer constraint |
-| btc_beta | -5.19m | 5.6% | 0.8% | index futures / beta hedge |
+| funding | -9.96m | 33.3% | 17.7% | optimizer constraint |
+| btc_beta | -5.19m | 2.1% | -1.5% | index futures / beta hedge |
 
 **Model release comparison (20 days before vs after)**
 

@@ -42,8 +42,10 @@ def summarize_bias(b: pd.Series, window: int) -> dict:
 
 # --------------------------------------------------------------------------- #
 def factor_bias(fm: FactorModel, rm: RiskModel, window: int = MODEL.bias_window) -> pd.DataFrame:
-    vol = pd.DataFrame(np.sqrt(np.clip(np.einsum("tkk->tk", np.nan_to_num(rm.F)), 0, None)),
-                       index=rm.dates, columns=rm.factors).replace(0, np.nan)
+    var = np.einsum("tkk->tk", np.nan_to_num(rm.F))
+    if rm.noise_var is not None:            # estimated returns = signal (what F forecasts) + sampling noise
+        var = var + rm.noise_var
+    vol = pd.DataFrame(np.sqrt(np.clip(var, 0, None)), index=rm.dates, columns=rm.factors).replace(0, np.nan)
     rows = []
     for f in rm.factors:
         z = rm.factor_returns[f] / vol[f]

@@ -2,7 +2,9 @@
 
 Factor covariance (forecast for day t made at the close of t-1):
 
-1. EWMA volatilities (short half-life) and EWMA correlations (longer half-life).
+1. EWMA volatilities (short half-life) and EWMA correlations (longer half-life), optionally
+   de-noised: the EWMA of each day's regression sampling covariance Q D Q' is subtracted,
+   because noise in estimated factor returns is specific risk, not factor risk.
 2. Ledoit-Wolf shrinkage of the correlation matrix toward the identity.
 3. Eigenfactor risk adjustment (Menchero, Orr & Wang 2011): Monte-Carlo
    estimate of the bias of sample eigenportfolio variances, scaled by 'a'.
@@ -10,8 +12,9 @@ Factor covariance (forecast for day t made at the close of t-1):
    bias statistic of standardised factor returns.
 5. Macro-announcement uplift: on scheduled macro days (known in advance) the
    variance of macro-sensitive factors (market, rates, FX, vol shock) is scaled by
-   the historical ratio of standardised squared market returns on macro days to
-   other days.
+   the historical ratio of standardised squared returns on macro days to other
+   days: the market's ratio for all of them, or (macro_per_factor) each factor's
+   own ratio shrunk toward 1.
 
 Slow factors (monitoring layer) are part of the covariance as "slow:<name>",
 with their core-orthogonalised exposures and second-stage returns, so a slow
@@ -26,7 +29,12 @@ Specific risk: EWMA time-series estimate (on the residual after the slow
 layer) blended with a structural model (log specific vol regressed on size,
 volatility, liquidity and industry) for stocks with short histories, a
 specific-risk regime adjustment and a multiplier on known event days
-(earnings, token unlocks).
+(earnings, token unlocks).  Optionally each squared residual is divided by its
+expected ratio to the true specific variance (leverage: a stock's own return
+pulls the regression fit toward it).
+
+Settings are calibrated against the simulator's true covariance in calibration.py
+(run_calibration.py).
 """
 from __future__ import annotations
 
@@ -90,6 +98,9 @@ class RiskModel:
     raw_factor_vol: pd.DataFrame = field(default_factory=pd.DataFrame)
     macro_mult: pd.Series = field(default_factory=pd.Series)
     factor_returns: pd.DataFrame = field(default_factory=pd.DataFrame)   # the series F is estimated on
+    noise_var: np.ndarray | None = None   # T x K sampling variance of each day's estimated factor return
+                                          # (removed from F when denoised; add it back to test F against f)
+    macro_uplift: pd.DataFrame = field(default_factory=pd.DataFrame)   # per macro-sensitive factor
 
     def factor_vol(self, t: int) -> pd.Series:
         return pd.Series(np.sqrt(np.clip(np.diag(self.F[t]), 0, None)), index=self.factors)
@@ -126,6 +137,22 @@ class RiskModelBuilder:
         idx = fm.factor_returns.index
         self.macro_day = (macro_day.reindex(idx).fillna(False).astype(bool).values
                           if macro_day is not None else np.zeros(len(idx), bool))
+        self.Q = fm.extras.get("noise_loadings")
+
+    def noise_cov(self, t: int, spec_var: np.ndarray) -> np.ndarray:
+        """Q_t diag(d_t) Q_t': sampling covariance of day t's estimated core factor returns."""
+        Qt = self.Q[t].astype(float)
+        return (Qt * np.nan_to_num(spec_var)) @ Qt.T
+
+    def leverage_ratio(self, t: int, d: np.ndarray) -> np.ndarray:
+        """kappa_i = var(residual_i) / var(e_i) with residual = (I - X Q) e: below 1 for stocks in the
+        regression (their own return pulls the fit toward them), above 1 for stocks outside it."""
+        M = -np.nan_to_num(self.fm.expo.X[t]) @ self.Q[t].astype(float)
+        M[np.diag_indices_from(M)] += 1.0
+        dd = np.nan_to_num(d)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            k = (M ** 2 @ dd) / dd
+        return np.clip(np.where(np.isfinite(k), k, 1.0), 0.3, 3.0)
 
     @staticmethod
     def _with_slow_factors(fm: FactorModel):
@@ -141,16 +168,25 @@ class RiskModelBuilder:
         return fr, X, {**e.groups, **{n: "slow" for n in names}}
 
     # ---------------- factor covariance ---------------- #
-    def factor_covariance(self, fr: pd.DataFrame):
+    def factor_covariance(self, fr: pd.DataFrame, spec_var: np.ndarray | None = None):
         """EWMA covariance with per-factor (and pairwise) weights so factors that are only
         observed on some days (events, limit hits, statistical factors before their window
-        fills) get variances conditional on the days they are active."""
+        fills) get variances conditional on the days they are active.
+
+        With cfg.denoise_factor_cov the EWMA of each day's sampling covariance Q_t D_t Q_t' is
+        subtracted: estimated factor returns carry specific noise that a covariance of them counts
+        as factor risk, while the same noise is already in specific risk.  It matters when the
+        cross-section is small relative to the number of factors (40 tokens, 13 factors)."""
         cfg = self.cfg
         f = fr.values
         T, K = f.shape
         lv, lc, lb = _decay(cfg.vol_halflife), _decay(cfg.corr_halflife), _decay(cfg.vra_halflife)
         Sv = np.zeros(K); wv = np.zeros(K)
         Sc = np.zeros((K, K)); wc = np.zeros((K, K))
+        denoise = (cfg.denoise_factor_cov and spec_var is not None and self.Q is not None
+                   and self.Q.shape[1] == K)
+        Nv = np.zeros(K); Nc = np.zeros((K, K))
+        noise_var = np.zeros((T, K))
         B2 = 0.0; wb = 0.0
         F = np.full((T, K, K), np.nan)
         vra = np.full(T, np.nan); shrink = np.full(T, np.nan)
@@ -166,16 +202,25 @@ class RiskModelBuilder:
         macro_idx = [k for k, f in enumerate(names) if f in MACRO_SENSITIVE]
         mkt = names.index("market") if "market" in names else 0
         acc = {True: [0.0, 0], False: [0.0, 0]}       # sum of z^2 and count, macro vs other days
+        acc_k = {True: [np.zeros(K), np.zeros(K)], False: [np.zeros(K), np.zeros(K)]}   # per factor
         macro_mult = np.full(T, np.nan)
         Fb = None
         for t in range(T):
+            Nt = self.noise_cov(t, spec_var[t]) if denoise else None
+            nt = np.diag(Nt) if denoise else np.zeros(K)
+            noise_var[t] = nt
             if n >= cfg.cov_min_obs:
                 ok = wv > min_w
-                var = np.where(ok, Sv / np.where(ok, wv, 1), np.nan)
+                Sv_ = np.maximum(Sv - Nv, cfg.denoise_floor * Sv) if denoise else Sv
+                var = np.where(ok, Sv_ / np.where(ok, wv, 1), np.nan)
                 fallback = np.nanmedian(var) if np.isfinite(var).any() else 1e-4
                 var = np.clip(np.where(ok, var, fallback), 1e-14, None)
                 okc = wc > (1 - lc ** 20)
-                C = np.where(okc, Sc / np.where(okc, wc, 1), 0.0)
+                Sc_ = Sc
+                if denoise:
+                    Sc_ = Sc - Nc
+                    np.fill_diagonal(Sc_, np.maximum(np.diag(Sc_), cfg.denoise_floor * np.diag(Sc)))
+                C = np.where(okc, Sc_ / np.where(okc, wc, 1), 0.0)
                 dc = np.sqrt(np.clip(np.diag(C), 1e-14, None))
                 corr = np.clip(C / np.outer(dc, dc), -0.99, 0.99)
                 corr[~okc] = 0.0
@@ -206,10 +251,19 @@ class RiskModelBuilder:
                     gamma = eigen_adjustment(F0, t_eff, cfg.eigen_sims, cfg.eigen_scale, self.rng)
                 d0, U0 = np.linalg.eigh(F0)
                 F1 = (U0 * (np.clip(d0, 1e-14, None) * gamma ** 2)) @ U0.T
-                lam2 = B2 / wb if wb > 0 else 1.0
+                lam2 = B2 / wb if wb > 0 and cfg.vra_factor else 1.0
                 Fb = lam2 * F1
                 F[t] = Fb
-                if self.macro_day[t] and acc[True][1] >= 6 and acc[False][1] >= 30:
+                if self.macro_day[t] and cfg.macro_per_factor and acc_k[False][1][mkt] >= 30:
+                    # each macro-sensitive factor gets its own ratio of mean z^2 on macro days to
+                    # other days, shrunk toward 1 by macro_prior_obs pseudo-days
+                    m_oth = acc_k[False][0] / np.maximum(acc_k[False][1], 1)
+                    m_mac = (acc_k[True][0] + cfg.macro_prior_obs * m_oth) / (acc_k[True][1] + cfg.macro_prior_obs)
+                    mm_k = np.clip(m_mac / np.maximum(m_oth, 1e-12), 1.0, cfg.macro_mult_cap)
+                    sc = np.ones(K); sc[macro_idx] = np.sqrt(mm_k[macro_idx])
+                    F[t] = Fb * np.outer(sc, sc)
+                    macro_mult[t] = mm_k[mkt]
+                elif self.macro_day[t] and not cfg.macro_per_factor and acc[True][1] >= 6 and acc[False][1] >= 30:
                     mm = (acc[True][0] / acc[True][1]) / max(acc[False][0] / acc[False][1], 1e-12)
                     mm = float(np.clip(mm, 1.0, cfg.macro_mult_cap))
                     sc = np.ones(K); sc[macro_idx] = np.sqrt(mm)
@@ -222,11 +276,16 @@ class RiskModelBuilder:
             if not obs.any():
                 continue
             if n >= cfg.cov_min_obs and np.isfinite(F[t]).all():
+                # an estimated factor return varies by the (denoised) forecast plus today's noise
+                fvar = np.diag(Fb) + nt
                 if obs[mkt]:
-                    z2 = min(ft[mkt] ** 2 / max(Fb[mkt, mkt], 1e-14), 25.0)
+                    z2 = min(ft[mkt] ** 2 / max(fvar[mkt], 1e-14), 25.0)
                     acc[bool(self.macro_day[t])][0] += z2
                     acc[bool(self.macro_day[t])][1] += 1
-                sd = np.sqrt(np.clip(np.diag(Fb) / max(vra[t] ** 2, 1e-12), 1e-14, None))
+                z2k = np.where(obs, np.minimum(np.nan_to_num(ft) ** 2 / np.maximum(fvar, 1e-14), 25.0), 0.0)
+                acc_k[bool(self.macro_day[t])][0] += z2k
+                acc_k[bool(self.macro_day[t])][1] += obs
+                sd = np.sqrt(np.clip(np.diag(Fb) / max(vra[t] ** 2, 1e-12) + nt, 1e-14, None))
                 active = obs & (wv > min_w)
                 if active.sum() > 2:
                     b2 = np.mean((ft[active] / sd[active]) ** 2)
@@ -237,10 +296,22 @@ class RiskModelBuilder:
             both = np.outer(obs, obs)
             Sc = np.where(both, lc * Sc + (1 - lc) * np.outer(fz, fz), Sc)
             wc = np.where(both, lc * wc + (1 - lc), wc)
+            if denoise:
+                Nv = np.where(obs, lv * Nv + (1 - lv) * nt, Nv)
+                Nc = np.where(both, lc * Nc + (1 - lc) * Nt, Nc)
             history.append(np.where(obs, ft, np.nan))
             n += 1
         idx = self.fm.factor_returns.index
         self.macro_mult = pd.Series(macro_mult, idx)
+        self.noise_var = noise_var
+        # end-of-sample uplift per macro-sensitive factor (raw ratio, and as applied)
+        m_oth = acc_k[False][0] / np.maximum(acc_k[False][1], 1)
+        raw = acc_k[True][0] / np.maximum(acc_k[True][1], 1) / np.maximum(m_oth, 1e-12)
+        shrunk = ((acc_k[True][0] + cfg.macro_prior_obs * m_oth) / (acc_k[True][1] + cfg.macro_prior_obs)
+                  / np.maximum(m_oth, 1e-12))
+        self.macro_uplift = pd.DataFrame({"macro_days": acc_k[True][1][macro_idx], "raw_ratio": raw[macro_idx],
+                                          "per_factor": np.clip(shrunk[macro_idx], 1.0, cfg.macro_mult_cap)},
+                                         index=[names[k] for k in macro_idx])
         return F, pd.Series(vra, idx), pd.Series(shrink, idx), \
             pd.DataFrame(gam_hist, idx), pd.DataFrame(rawvol, idx, fr.columns)
 
@@ -282,10 +353,22 @@ class RiskModelBuilder:
                 sd_s = np.sqrt(var)
                 sd_c = np.sqrt(np.clip(np.diag(Fct), 0, None))
                 Finv = np.linalg.pinv(Fct, rcond=1e-10, hermitian=True)
-                cross = (corr[s, :Kc] * np.outer(sd_s, sd_c)) @ (Finv @ Fct)    # kept within the core's range
+                if cfg.denoise_factor_cov:
+                    # these correlations are between estimated (noisy) returns while the core block is
+                    # de-noised; projecting them through its inverse would inflate the slow floor
+                    # (~2x).  Regress slow on core with the raw core covariance instead (attenuated,
+                    # never inflated) and map the betas through the de-noised core.
+                    Rc = corr[:Kc, :Kc].copy()
+                    np.fill_diagonal(Rc, 1.0)
+                    beta = np.linalg.pinv(Rc * np.outer(dc[:Kc], dc[:Kc]), rcond=1e-10, hermitian=True) \
+                        @ (corr[s, :Kc] * np.outer(sd_s, dc[:Kc])).T
+                    cross = (Fct @ beta).T
+                    implied = beta.T @ Fct @ beta
+                else:
+                    cross = (corr[s, :Kc] * np.outer(sd_s, sd_c)) @ (Finv @ Fct)    # kept within the core's range
+                    implied = cross @ Finv @ cross.T
                 Sss = corr[s, s] * np.outer(sd_s, sd_s)
                 np.fill_diagonal(Sss, sd_s ** 2)
-                implied = cross @ Finv @ cross.T
                 d, U = np.linalg.eigh(0.5 * (Sss - implied + (Sss - implied).T))
                 Sss = implied + (U * np.clip(d, 1e-4 * np.mean(sd_s ** 2), None)) @ U.T
                 F[t, :Kc, :Kc] = Fct
@@ -321,6 +404,7 @@ class RiskModelBuilder:
         E = e.estu.values
         cap = np.nan_to_num(e.cap.values)
         ev_names = self.event_factors or None
+        lev_adj = cfg.specific_leverage_adj and self.Q is not None
         for t in range(T):
             X = e.X[t]
             valid = np.all(np.isfinite(X), 1)
@@ -337,7 +421,7 @@ class RiskModelBuilder:
                     sig_str = np.full(N, np.nanmedian(sig_ts))
                 g = np.clip((n - 20) / 100, 0, 1)
                 sig = np.where(np.isfinite(sig_ts), g * sig_ts + (1 - g) * sig_str, sig_str)
-                lam2 = B2 / wb if wb > 0 else 1.0
+                lam2 = B2 / wb if wb > 0 and cfg.vra_specific else 1.0
                 var = lam2 * sig ** 2
                 if ev_names is not None:
                     on_event = e.flagged(t, ev_names).any(axis=1)
@@ -345,27 +429,36 @@ class RiskModelBuilder:
                 var[~valid] = np.nan
                 out[t] = var
                 lam[t] = np.sqrt(lam2)
+            # a regression residual is not the specific return: scale u^2 by its expected ratio kappa
+            kap = np.ones(N)
+            if lev_adj and np.isfinite(out[t]).any() and self.Q[t].any():
+                kap = self.leverage_ratio(t, np.where(np.isfinite(out[t]), out[t], np.nanmedian(out[t])))
+            if np.isfinite(out[t]).any():
                 ut = U[t]
                 ok = E[t] & np.isfinite(ut) & np.isfinite(out[t]) & valid
                 if ok.sum() > 20:
-                    b2 = np.average(ut[ok] ** 2 / out[t][ok] * lam2, weights=cap[t][ok] + 1e-9)
+                    b2 = np.average(ut[ok] ** 2 / (kap[ok] * out[t][ok]) * lam[t] ** 2, weights=cap[t][ok] + 1e-9)
                     B2 = lb * B2 + (1 - lb) * min(b2, 25.0); wb = lb * wb + (1 - lb)
             ut = U[t]
             m = np.isfinite(ut)
-            S[m] = ls * S[m] + (1 - ls) * np.minimum(ut[m] ** 2, 0.25 ** 2)
+            S[m] = ls * S[m] + (1 - ls) * np.minimum(ut[m] ** 2 / kap[m], 0.25 ** 2)
             w[m] = ls * w[m] + (1 - ls)
             n[m] += 1
         return out, pd.Series(lam, index=fm.resid.index)
 
     def build(self) -> RiskModel:
-        # core block estimated on core factors alone, so adding the slow layer leaves it unchanged
-        F, vra, shrink, gam, rawvol = self.factor_covariance(self.fm.factor_returns)
+        # specific risk first: the factor-return noise removed from F is measured with it.
+        # Core block estimated on core factors alone, so adding the slow layer leaves it unchanged
+        spec, lam_s = self.specific_risk()
+        F, vra, shrink, gam, rawvol = self.factor_covariance(self.fm.factor_returns, spec)
+        noise = self.noise_var
         if self.factor_returns.shape[1] > F.shape[1]:
             F, rawvol_slow = self.link_slow_block(F, shrink.values)
             rawvol = pd.concat([rawvol, rawvol_slow], axis=1)
-        spec, lam_s = self.specific_risk()
+            noise = np.pad(noise, ((0, 0), (0, F.shape[1] - noise.shape[1])))
         e = self.fm.expo
         return RiskModel(name=self.fm.name, dates=e.dates, factors=list(self.factor_returns.columns),
                          groups=self.groups, tickers=e.tickers, X=self.X, F=F, spec_var=spec, vra=vra,
                          vra_specific=lam_s, shrinkage=shrink, eigen_gamma=gam, raw_factor_vol=rawvol,
-                         macro_mult=self.macro_mult, factor_returns=self.factor_returns)
+                         macro_mult=self.macro_mult, factor_returns=self.factor_returns, noise_var=noise,
+                         macro_uplift=self.macro_uplift)
