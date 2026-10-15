@@ -77,6 +77,22 @@ def test_slow_block_leaves_core_covariance_unchanged_and_is_psd():
     assert min(np.linalg.eigvalsh(F[t]).min() for t in np.where(live)[0]) > 0
 
 
+def test_local_level_change_removes_differenced_noise_point_in_time():
+    from factor_framework.data_loader import local_level_change
+    rng = np.random.default_rng(6)
+    T = 1500
+    level = np.cumsum(rng.normal(0, 0.03, T))
+    x = pd.Series(level + rng.normal(0, 0.04, T))                 # noise var ~1.8x innovation var
+    true = pd.Series(level).diff()
+    g = local_level_change(x)
+    raw = x.diff()
+    assert raw.autocorr() < -0.3
+    assert abs(g.iloc[200:].autocorr()) < 0.08                     # filtered change ~ white
+    assert g.iloc[200:].corr(true.iloc[200:]) > raw.iloc[200:].corr(true.iloc[200:]) + 0.02
+    x2 = x.copy(); x2.iloc[1000:] += 5.0                            # changing the future ...
+    assert np.allclose(local_level_change(x2).iloc[:1000], g.iloc[:1000], equal_nan=True)   # ... leaves the past
+
+
 def test_global_layer_survives_mean_reverting_factor():
     """A factor with lag-1 autocorrelation below -0.5 has a negative Newey-West variance;
     the cross-correlations must stay valid and leave the local diagonal blocks intact."""
@@ -99,6 +115,96 @@ def test_global_layer_survives_mean_reverting_factor():
     fr = g.firm_risk(t, {"A": pd.Series({"shock": 1e6, "mkt": 1e6}), "B": pd.Series({"mkt": 1e6})}, {})
     assert fr.total_vol <= fr.standalone_vol.sum() + 1e-6               # |block correlation| <= 1
     assert (fr.contribution.abs() <= fr.standalone_vol + 1e-6).all()
+
+
+def _async_markets(seed=7, T=900):
+    """US closes after CN: the common shock z = zA (Asian hours) + zU (US hours); a CN session
+    return covers zU since its last close plus today's zA.  CN has holidays."""
+    rng = np.random.default_rng(seed)
+    cal = pd.bdate_range("2023-01-02", periods=T)
+    zA, zU = rng.normal(0, 0.01, T), rng.normal(0, 0.01, T)
+    us = zA + zU + rng.normal(0, 0.005, T)
+    cn_open = np.ones(T, bool); cn_open[rng.choice(np.arange(5, T), 60, replace=False)] = False
+    level = np.cumsum(zA) + np.r_[0.0, np.cumsum(zU)[:-1]]          # common level at the CN close
+    s = np.where(cn_open)[0]
+    cn = 0.8 * np.diff(np.r_[0.0, level[s]]) + rng.normal(0, 0.006, len(s))
+    cn_sync_true = 0.8 * (zA + zU) + rng.normal(0, 0.006, T)        # same exposure, seen at the US close
+    true_corr = np.corrcoef(us, cn_sync_true)[0, 1]
+    return cal, pd.DataFrame({"market": us}, index=cal), pd.DataFrame({"market": cn}, index=cal[s]), cn_open, true_corr
+
+
+def _layer(cal, us, cn):
+    from types import SimpleNamespace
+    from factor_framework.global_layer import GlobalRiskLayer
+    T = len(cal)
+    rms = {"US": SimpleNamespace(dates=cal, F=np.full((T, 1, 1), 2.25e-4)),
+           "CN": SimpleNamespace(dates=cn.index, F=np.full((len(cn), 1, 1), 1.6e-4))}
+    return GlobalRiskLayer(rms, {"US": us, "CN": cn}, pd.Series(0.14, index=cal), cal).build()
+
+
+def test_synchronisation_recovers_same_time_correlation():
+    cal, us, cn, cn_open, true_corr = _async_markets()
+    g = _layer(cal, us, cn)
+    r, rs = g.returns.iloc[300:], g.returns_sync.iloc[300:]
+    raw_corr = r["US:market"].corr(r["CN:market"])
+    # covariance from synchronised returns, scaled by the raw variances (the local models' vols)
+    sync_corr = np.cov(rs["US:market"], rs["CN:market"])[0, 1] / np.sqrt(r["US:market"].var() * r["CN:market"].var())
+    i, j = g.factors.index("US:market"), g.factors.index("CN:market")
+    implied = np.mean([g.G[t][i, j] / np.sqrt(g.G[t][i, i] * g.G[t][j, j]) for t in range(300, len(cal))])
+    assert raw_corr < true_corr - 0.25                                # asynchrony biases daily corr down
+    assert abs(sync_corr - true_corr) < 0.05 and abs(implied - true_corr) < 0.05
+    B = g.sync_betas["CN"]["B"][-1, 0, 0]
+    assert 0.25 < B < 0.55                       # CN catches up 0.8 * cov(zU, US) / var(US) ~ 0.36
+    assert np.nanmax(g.psd_repair) < 1e-2
+
+
+def test_synchronisation_telescopes_and_is_point_in_time():
+    cal, us, cn, cn_open, _ = _async_markets(seed=8)
+    g = _layer(cal, us, cn)
+    adj = (g.returns_sync - g.returns)["CN:market"].values
+    sb = g.sync_betas["CN"]
+    assert np.isclose(adj.sum(), sb["B"][-1, 0, 0] * sb["P"][-1, 0])  # multi-day returns unchanged
+    assert np.allclose((g.returns_sync - g.returns)["US:market"], 0)
+    h = np.where(~cn_open[200:])[0][0] + 200                          # CN holiday: still tracks the US move
+    assert g.returns.loc[cal[h], "CN:market"] == 0 and g.returns_sync.loc[cal[h], "CN:market"] != 0
+    us2, cn2 = us.copy(), cn.copy()
+    us2.iloc[700:] *= 3; cn2.loc[cal[700]:] *= 3
+    g2 = _layer(cal, us2, cn2)
+    assert np.allclose(g2.returns_sync.iloc[:700], g.returns_sync.iloc[:700])
+    assert np.allclose(g2.G[:701], g.G[:701], equal_nan=True)         # G[t] uses data to t-1
+
+
+def test_mapped_us_session_nets_against_us_market():
+    """CN:us_session is the previous US session (futures = market + small basis).  A CN book
+    long it and a US book short the US market is nearly hedged: firm risk should be the basis
+    risk, not two near-independent factors; same-direction books should add up."""
+    from types import SimpleNamespace
+    from factor_framework.global_layer import GlobalRiskLayer
+    rng = np.random.default_rng(9)
+    T = 700
+    cal = pd.bdate_range("2023-01-02", periods=T)
+    mkt = rng.normal(0, 0.01, T)
+    fut = mkt + rng.normal(0, 0.0015, T)                             # basis sd 15bp
+    us = pd.DataFrame({"market": mkt}, index=cal)
+    cn = pd.DataFrame({"market": 0.3 * np.r_[0.0, mkt[:-1]] + rng.normal(0, 0.012, T),
+                       "us_session": np.r_[0.0, fut[:-1]]}, index=cal)
+    rms = {"US": SimpleNamespace(dates=cal, F=np.full((T, 1, 1), 1e-4)),
+           "CN": SimpleNamespace(dates=cal, F=np.repeat(np.array([[1.6e-4, 3e-5], [3e-5, 1.02e-4]])[None], T, 0))}
+    g = GlobalRiskLayer(rms, {"US": us, "CN": cn}, pd.Series(0.14, index=cal), cal).build()
+    assert "CN:us_session" not in g.factors and "CN:us_session_basis" in g.blocks["CN"]
+    t = T - 1
+    b = g.mapped["CN:us_session"][2][t]
+    assert abs(b - 1.0) < 0.05
+    hedge = g.firm_risk(t, {"US": pd.Series({"market": -10e6}), "CN": pd.Series({"us_session": 10e6})}, {})
+    assert 0.6 * 15e3 < hedge.total_vol < 1.6 * 15e3                  # ~ 10m x 15bp basis
+    same = g.firm_risk(t, {"US": pd.Series({"market": 10e6}), "CN": pd.Series({"us_session": 10e6})}, {})
+    assert abs(same.total_vol / 200e3 - 1) < 0.1                      # ~ 20m x 1% market vol
+    # the CN book's overnight US exposure shows up in the US block; only the basis stays in CN
+    solo = g.firm_risk(t, {"CN": pd.Series({"us_session": 10e6})}, {})
+    assert solo.contribution["US"] > 0.95 * solo.total_vol
+    assert np.allclose(g.G[t][np.ix_([0], [0])], 1e-4)               # local blocks kept
+    i = [g.factors.index(c) for c in g.blocks["CN"][:1]]
+    assert np.allclose(g.G[t][np.ix_(i, i)], 1.6e-4)
 
 
 def test_carino_linking_adds_up():

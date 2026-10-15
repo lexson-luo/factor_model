@@ -139,6 +139,48 @@ def aligned_log_change(level: pd.Series, dates: pd.DatetimeIndex) -> pd.Series:
     return lv.reindex(lv.index.union(dates)).ffill().reindex(dates).diff()
 
 
+def local_level_change(x: pd.Series, min_obs: int = 60) -> pd.Series:
+    """Daily change in the filtered level of a series observed with transient noise.
+
+    Model: x_t = level_t + noise_t, level a random walk.  Then dx is MA(1) with lag-1
+    autocorrelation rho in (-1/2, 0], and the steady-state Kalman filter is exponential
+    smoothing with gain K = 1 + theta, theta the invertible MA(1) root of rho.  The output
+    (the filtered level change, i.e. K times the innovation) is serially uncorrelated, whereas
+    the raw difference carries -noise_{t-1} into every day.  rho is estimated on an expanding
+    window ending the previous day (point in time); no smoothing before ``min_obs``.  rho is
+    floored at -0.4 (K >= 0.5, at least half the weight on today's observation): MA(1)
+    estimates near the non-invertible -0.5 are unstable, and a quiet start of sample would
+    otherwise over-smooth - lagging the shock - for a long time after."""
+    v = x.values.astype(float)
+    out = np.full(len(v), np.nan)
+    lvl = x_prev = dx_prev = np.nan
+    s1 = s2 = s11 = 0.0                   # sums of dx, dx^2, dx_t * dx_{t-1}
+    m = m1 = 0
+    for t in range(len(v)):
+        if not np.isfinite(v[t]):
+            continue
+        if not np.isfinite(lvl):
+            lvl = x_prev = v[t]
+            continue
+        K = 1.0
+        if m >= min_obs:
+            mu = s1 / m
+            var = s2 / m - mu ** 2
+            rho = (s11 / m1 - mu ** 2) / var if var > 0 and m1 else 0.0
+            rho = min(max(rho, -0.4), 0.0)
+            if rho < 0:
+                K = 1.0 + (1 - np.sqrt(1 - 4 * rho ** 2)) / (2 * rho)
+        new = lvl + K * (v[t] - lvl)
+        out[t] = new - lvl
+        lvl = new
+        dx = v[t] - x_prev                # update moments after use: K_t uses data to t-1
+        s1 += dx; s2 += dx * dx; m += 1
+        if np.isfinite(dx_prev):
+            s11 += dx * dx_prev; m1 += 1
+        x_prev, dx_prev = v[t], dx
+    return pd.Series(out, index=x.index)
+
+
 def prior_session_return(us_fut_lr: pd.Series, dates: pd.DatetimeIndex) -> pd.Series:
     """For an Asian session on date t: sum of US session returns closing between the previous
     local close and today's open (US dates d with prev_date <= d < t)."""
@@ -311,7 +353,9 @@ def load_equity_panel(market: str, data_dir: Path = DATA_DIR) -> EquityPanel:
     if md is not None:
         md["date"] = pd.to_datetime(md["date"])
         depth = md[md.market == market].set_index("date")["top5_depth_local"].reindex(dates)
-        shocks["liq_shock"] = 0.5 * np.log(agg_spread).diff() - 0.5 * np.log(depth).diff()
+        # both levels carry day-to-day measurement noise; differencing it gives a strongly
+        # negatively autocorrelated shock, so take the change in the filtered level instead
+        shocks["liq_shock"] = local_level_change(0.5 * np.log(agg_spread) - 0.5 * np.log(depth))
     if spec.fx_series:
         shocks["fx"] = aligned_log_change(fx[fx.pair == spec.fx_series].set_index("date")["rate"], dates)
     rfut = optional("macro/rates_futures.csv")

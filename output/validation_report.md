@@ -7,16 +7,16 @@
 | index | named | hybrid |
 |---|---|---|
 | US | 0.308 | 0.337 |
-| CN | 0.363 | 0.382 |
+| CN | 0.363 | 0.381 |
 | CRYPTO | 0.430 | 0.448 |
 
 | strategy | factor_share_of_hold_var | corr_factor_vs_hold |
 |---|---|---|
 | A1_US_STATARB | 84.3% | 0.914 |
 | A2_CN_STATARB | 77.0% | 0.868 |
-| B1_US_INTRADAY | 76.3% | 0.866 |
-| C1_US_EVENT | 52.5% | 0.722 |
-| D1_US_CROWDING | 87.9% | 0.937 |
+| B1_US_INTRADAY | 76.0% | 0.865 |
+| C1_US_EVENT | 52.4% | 0.720 |
+| D1_US_CROWDING | 87.8% | 0.937 |
 | E1_CRYPTO_CARRY | 17.0% | 0.534 |
 
 ## 2. Calibration: bias statistics (target 1, band 1 ± √(2/T))
@@ -25,11 +25,11 @@
 
 | strategy | mean_bias | within_band_pct | band | n_windows | realised_vol_ann | pred_vol_ann |
 |---|---|---|---|---|---|---|
-| A1_US_STATARB | 0.921 | 87.5% | 0.178 | 8 | 3.38m | 3.80m |
+| A1_US_STATARB | 0.918 | 87.5% | 0.178 | 8 | 3.38m | 3.81m |
 | A2_CN_STATARB | 0.907 | 62.5% | 0.178 | 8 | 1.90m | 2.05m |
-| B1_US_INTRADAY | 0.898 | 87.5% | 0.178 | 8 | 0.46m | 0.51m |
-| C1_US_EVENT | 0.991 | 87.5% | 0.178 | 8 | 2.67m | 2.53m |
-| D1_US_CROWDING | 0.954 | 87.5% | 0.178 | 8 | 3.10m | 3.28m |
+| B1_US_INTRADAY | 0.897 | 87.5% | 0.178 | 8 | 0.46m | 0.51m |
+| C1_US_EVENT | 0.988 | 87.5% | 0.178 | 8 | 2.67m | 2.55m |
+| D1_US_CROWDING | 0.951 | 87.5% | 0.178 | 8 | 3.10m | 3.29m |
 | E1_CRYPTO_CARRY | 0.906 | 92.3% | 0.178 | 13 | 3.35m | 3.73m |
 
 ![bias](charts/bias_A1_US_STATARB.png)
@@ -40,27 +40,27 @@
 
 | group | mean_bias | within_band_pct |
 |---|---|---|
-| event | 1.007 | 66.7% |
-| industry | 1.037 | 94.9% |
-| market | 1.128 | 55.6% |
-| market_specific | 1.099 | 66.7% |
-| slow | 1.011 | 88.9% |
-| statistical | 0.858 | 75.0% |
-| style | 0.867 | 70.0% |
-| timeseries | 0.951 | 30.6% |
+| event | 1.055 | 0.0% |
+| industry | 1.042 | 93.9% |
+| market | 1.134 | 55.6% |
+| market_specific | 1.110 | 66.7% |
+| slow | 1.011 | 86.7% |
+| statistical | 0.861 | 68.8% |
+| style | 0.869 | 71.1% |
+| timeseries | 0.948 | 30.6% |
 
 **CN**
 
 | group | mean_bias | within_band_pct |
 |---|---|---|
-| event | 0.917 | 50.0% |
-| industry | 1.019 | 93.3% |
-| market | 1.150 | 66.7% |
-| market_specific | 0.985 | 100.0% |
-| slow | 0.997 | 97.8% |
-| statistical | 0.879 | 85.7% |
-| style | 0.861 | 73.3% |
-| timeseries | 0.954 | 37.8% |
+| event | 0.937 | 50.0% |
+| industry | 1.022 | 93.3% |
+| market | 1.152 | 66.7% |
+| market_specific | 0.996 | 100.0% |
+| slow | 0.997 | 95.6% |
+| statistical | 0.883 | 85.7% |
+| style | 0.862 | 71.1% |
+| timeseries | 0.954 | 40.0% |
 
 **CRYPTO**
 
@@ -76,8 +76,8 @@
 
 | index | mean_bias | within_band_pct | band | n_windows |
 |---|---|---|---|---|
-| US | 0.999 | 67.9% | 0.178 | 1,336 |
-| CN | 0.992 | 80.4% | 0.178 | 1,335 |
+| US | 0.999 | 68.0% | 0.178 | 1,336 |
+| CN | 0.992 | 79.8% | 0.178 | 1,335 |
 | CRYPTO | 1.001 | 45.0% | 0.178 | 600 |
 
 ## 3. Benchmark comparison (challengers)
@@ -86,7 +86,7 @@ The in-house model must beat a market+industry baseline and a pure PCA model on 
 
 | model | n_factors | mean_cs_r2 | strategy_bias_mean | strategy_bias_mad_from_1 | strategy_within_band_pct | first_valid |
 |---|---|---|---|---|---|---|
-| in-house core (named + statistical) | 34 | 0.337 | 0.941 | 0.059 | 87.5% | 2024-04-01 |
+| in-house core (named + statistical) | 34 | 0.337 | 0.938 | 0.062 | 87.5% | 2024-04-01 |
 | baseline: market + industry | 12 | 0.167 | 1.497 | 0.497 | 21.9% | 2024-04-01 |
 | challenger: PCA (10 factors) | 11 | 0.196 | 1.206 | 0.206 | 53.1% | 2024-06-25 |
 
@@ -97,32 +97,32 @@ The in-house model must beat a market+industry baseline and a pure PCA model on 
 | factor | corr_with_true | n |
 |---|---|---|
 | market | 0.835 | 628 |
-| ind_Technology | 0.729 | 628 |
-| ind_Semiconductors | 0.616 | 628 |
-| ind_Communication | 0.787 | 628 |
-| ind_Consumer Discretionary | 0.697 | 628 |
+| ind_Technology | 0.723 | 628 |
+| ind_Semiconductors | 0.621 | 628 |
+| ind_Communication | 0.789 | 628 |
+| ind_Consumer Discretionary | 0.695 | 628 |
 | ind_Consumer Staples | 0.723 | 628 |
-| ind_Health Care | 0.789 | 628 |
-| ind_Financials | 0.729 | 628 |
-| ind_Industrials | 0.794 | 628 |
-| ind_Energy | 0.786 | 628 |
-| ind_Materials | 0.715 | 628 |
-| ind_Utilities | 0.780 | 628 |
-| size | 0.614 | 628 |
+| ind_Health Care | 0.788 | 628 |
+| ind_Financials | 0.727 | 628 |
+| ind_Industrials | 0.791 | 628 |
+| ind_Energy | 0.788 | 628 |
+| ind_Materials | 0.718 | 628 |
+| ind_Utilities | 0.782 | 628 |
+| size | 0.612 | 628 |
 | liquidity | 0.740 | 628 |
 | volatility | 0.861 | 628 |
-| st_reversal | 0.724 | 628 |
-| st_momentum | 0.589 | 628 |
-| overnight_gap | 0.579 | 628 |
-| crowding | 0.859 | 628 |
-| retail_attention | 0.703 | 628 |
-| earnings | 0.293 | 207 |
-| option_expiry | 0.521 | 30 |
+| st_reversal | 0.722 | 628 |
+| st_momentum | 0.588 | 628 |
+| overnight_gap | 0.580 | 628 |
+| crowding | 0.858 | 628 |
+| retail_attention | 0.702 | 628 |
+| earnings | 0.292 | 207 |
+| option_expiry | 0.519 | 30 |
 | corporate_action | – | 30 |
-| in_play | 0.255 | 66 |
+| in_play | 0.256 | 66 |
 | crypto_beta | 0.888 | 628 |
-| stat_1 vs hidden theme | 0.824 | 508 |
-| stat_2 vs hidden theme | 0.319 | 508 |
+| stat_1 vs hidden theme | 0.819 | 508 |
+| stat_2 vs hidden theme | 0.233 | 508 |
 
 **CN**
 
@@ -130,29 +130,29 @@ The in-house model must beat a market+industry baseline and a pure PCA model on 
 |---|---|---|
 | market | 0.894 | 606 |
 | ind_Banks | 0.796 | 606 |
-| ind_Non-bank Financials | 0.719 | 606 |
-| ind_Electronics | 0.725 | 606 |
-| ind_Computers | 0.694 | 606 |
-| ind_Pharma | 0.725 | 606 |
-| ind_Food & Beverage | 0.673 | 606 |
-| ind_Machinery | 0.709 | 606 |
+| ind_Non-bank Financials | 0.720 | 606 |
+| ind_Electronics | 0.724 | 606 |
+| ind_Computers | 0.695 | 606 |
+| ind_Pharma | 0.728 | 606 |
+| ind_Food & Beverage | 0.677 | 606 |
+| ind_Machinery | 0.705 | 606 |
 | ind_Autos | 0.756 | 606 |
 | ind_Chemicals | 0.768 | 606 |
 | ind_Real Estate | 0.784 | 606 |
-| size | 0.633 | 606 |
-| liquidity | 0.592 | 606 |
-| volatility | 0.842 | 606 |
-| st_reversal | 0.717 | 606 |
-| st_momentum | 0.486 | 606 |
-| overnight_gap | 0.537 | 606 |
-| crowding | 0.624 | 606 |
-| retail_attention | 0.681 | 606 |
-| earnings | 0.095 | 130 |
-| option_expiry | 0.390 | 30 |
+| size | 0.634 | 606 |
+| liquidity | 0.590 | 606 |
+| volatility | 0.841 | 606 |
+| st_reversal | 0.718 | 606 |
+| st_momentum | 0.489 | 606 |
+| overnight_gap | 0.536 | 606 |
+| crowding | 0.622 | 606 |
+| retail_attention | 0.682 | 606 |
+| earnings | 0.094 | 130 |
+| option_expiry | 0.393 | 30 |
 | corporate_action | – | 37 |
-| limit_hit | 0.465 | 188 |
+| limit_hit | 0.462 | 188 |
 | stat_1 vs hidden theme | 0.074 | 486 |
-| stat_2 vs hidden theme | 0.047 | 486 |
+| stat_2 vs hidden theme | 0.031 | 486 |
 
 ## 4b. Factor selection tests (Section 2.1)
 
@@ -160,47 +160,47 @@ Each factor must earn its place on our own data. Core factors: drop-one marginal
 
 | market | factor | test | marginal_r2 | pct_days_abs_t_gt_2 | ann_vol | resid_corr_reduction | max_abs_z_on_squeeze_days | decision |
 |---|---|---|---|---|---|---|---|---|
-| US | beta | core (drop-one) | 0.011 | 0.331 | 5.4% | -0.003 | 2.449 | keep in core |
-| US | size | core (drop-one) | 0.018 | 0.480 | 6.2% | -0.013 | 0.296 | keep in core |
-| US | liquidity | core (drop-one) | 0.007 | 0.248 | 3.2% | -0.006 | 4.398 | keep in core |
-| US | volatility | core (drop-one) | 0.016 | 0.450 | 5.3% | 0.028 | 4.341 | keep in core |
-| US | st_reversal | core (drop-one) | 0.008 | 0.274 | 8.5% | 0.021 | 2.924 | keep in core |
-| US | st_momentum | core (drop-one) | 0.006 | 0.219 | 5.2% | -0.007 | 0.892 | keep in core |
-| US | overnight_gap | core (drop-one) | 0.006 | 0.175 | 5.3% | 0.022 | 1.271 | keep in core |
-| US | crowding | core (drop-one) | 0.013 | 0.402 | 4.3% | -0.022 | 5.366 | keep in core |
-| US | etf_ownership | core (drop-one) | 0.007 | 0.262 | 3.2% | -0.003 | 0.970 | keep in core |
-| US | retail_attention | core (drop-one) | 0.006 | 0.188 | 2.9% | -0.001 | 2.313 | keep in core |
-| US | earnings | core (drop-one, affected stock-days) | 0.075 | 0.401 | 20.8% | -0.001 | 0.427 | keep in core |
+| US | beta | core (drop-one) | 0.011 | 0.324 | 5.5% | -0.004 | 2.474 | keep in core |
+| US | size | core (drop-one) | 0.018 | 0.476 | 6.2% | -0.014 | 0.230 | keep in core |
+| US | liquidity | core (drop-one) | 0.007 | 0.253 | 3.2% | -0.006 | 4.364 | keep in core |
+| US | volatility | core (drop-one) | 0.016 | 0.446 | 5.3% | 0.028 | 4.374 | keep in core |
+| US | st_reversal | core (drop-one) | 0.008 | 0.274 | 8.5% | 0.020 | 2.866 | keep in core |
+| US | st_momentum | core (drop-one) | 0.006 | 0.211 | 5.2% | -0.006 | 0.818 | keep in core |
+| US | overnight_gap | core (drop-one) | 0.006 | 0.177 | 5.3% | 0.021 | 1.301 | keep in core |
+| US | crowding | core (drop-one) | 0.013 | 0.407 | 4.4% | -0.022 | 5.295 | keep in core |
+| US | etf_ownership | core (drop-one) | 0.007 | 0.267 | 3.2% | -0.003 | 0.997 | keep in core |
+| US | retail_attention | core (drop-one) | 0.006 | 0.198 | 2.9% | -0.001 | 2.156 | keep in core |
+| US | earnings | core (drop-one, affected stock-days) | 0.076 | 0.401 | 20.8% | -0.001 | 0.378 | keep in core |
 | US | index_rebalance | core (drop-one, affected stock-days) | 0.089 | 0.000 | 13.9% | -0.000 | – | review: move to monitoring layer |
 | US | option_expiry | core (drop-one, affected stock-days) | 0.006 | 0.111 | 10.8% | 0.000 | – | review: move to monitoring layer |
-| US | corporate_action | core (drop-one, affected stock-days) | 0.026 | 0.111 | 5.7% | 0.000 | – | review: move to monitoring layer |
-| US | in_play | core (drop-one, affected stock-days) | 0.082 | 0.220 | 30.3% | 0.001 | 0.967 | keep in core |
-| US | crypto_beta | core (drop-one, affected stock-days) | 0.265 | 0.361 | 56.5% | 0.002 | 1.741 | keep in core |
-| US | vol_shock | time-series (variance explained) | 0.021 | – | 138.5% | -0.031 | 3.495 | keep in core |
-| US | liq_shock | time-series (variance explained) | 0.004 | – | 167.6% | -0.000 | 5.378 | keep in core |
+| US | corporate_action | core (drop-one, affected stock-days) | 0.025 | 0.074 | 5.6% | 0.000 | – | review: move to monitoring layer |
+| US | in_play | core (drop-one, affected stock-days) | 0.084 | 0.220 | 30.3% | 0.001 | 0.981 | keep in core |
+| US | crypto_beta | core (drop-one, affected stock-days) | 0.264 | 0.363 | 56.4% | 0.001 | 1.621 | keep in core |
+| US | vol_shock | time-series (variance explained) | 0.023 | – | 138.5% | -0.027 | 3.495 | keep in core |
+| US | liq_shock | time-series (variance explained) | 0.005 | – | 110.8% | 0.006 | 5.456 | keep in core |
 | US | fx | time-series (variance explained) | 0.015 | – | 7.5% | 0.007 | 0.499 | keep in core |
 | US | rates | time-series (variance explained) | 0.039 | – | 7.4% | -0.002 | 0.402 | keep in core |
-| CN | beta | core (drop-one) | 0.017 | 0.302 | 8.5% | – | 0.791 | keep in core |
-| CN | size | core (drop-one) | 0.027 | 0.425 | 9.2% | – | 1.617 | keep in core |
-| CN | liquidity | core (drop-one) | 0.009 | 0.156 | 4.4% | – | 3.584 | keep in core |
-| CN | volatility | core (drop-one) | 0.023 | 0.391 | 7.6% | – | 0.342 | keep in core |
-| CN | st_reversal | core (drop-one) | 0.013 | 0.235 | 12.8% | – | 0.243 | keep in core |
-| CN | st_momentum | core (drop-one) | 0.008 | 0.140 | 7.6% | – | 0.509 | keep in core |
-| CN | overnight_gap | core (drop-one) | 0.008 | 0.142 | 7.7% | – | 1.890 | keep in core |
-| CN | crowding | core (drop-one) | 0.009 | 0.156 | 4.4% | – | 0.352 | keep in core |
-| CN | etf_ownership | core (drop-one) | 0.010 | 0.175 | 4.9% | – | 1.826 | keep in core |
-| CN | retail_attention | core (drop-one) | 0.010 | 0.155 | 4.4% | – | 0.415 | keep in core |
-| CN | earnings | core (drop-one, affected stock-days) | 0.096 | 0.299 | 30.3% | – | – | keep in core |
+| CN | beta | core (drop-one) | 0.017 | 0.300 | 8.5% | – | 0.800 | keep in core |
+| CN | size | core (drop-one) | 0.027 | 0.420 | 9.2% | – | 1.606 | keep in core |
+| CN | liquidity | core (drop-one) | 0.009 | 0.158 | 4.4% | – | 3.588 | keep in core |
+| CN | volatility | core (drop-one) | 0.023 | 0.387 | 7.6% | – | 0.381 | keep in core |
+| CN | st_reversal | core (drop-one) | 0.013 | 0.231 | 12.8% | – | 0.252 | keep in core |
+| CN | st_momentum | core (drop-one) | 0.008 | 0.140 | 7.7% | – | 0.518 | keep in core |
+| CN | overnight_gap | core (drop-one) | 0.008 | 0.140 | 7.8% | – | 1.918 | keep in core |
+| CN | crowding | core (drop-one) | 0.009 | 0.156 | 4.4% | – | 0.469 | keep in core |
+| CN | etf_ownership | core (drop-one) | 0.010 | 0.176 | 4.9% | – | 1.846 | keep in core |
+| CN | retail_attention | core (drop-one) | 0.010 | 0.158 | 4.5% | – | 0.424 | keep in core |
+| CN | earnings | core (drop-one, affected stock-days) | 0.095 | 0.299 | 30.4% | – | – | keep in core |
 | CN | index_rebalance | core (drop-one, affected stock-days) | 0.257 | 0.286 | 27.8% | – | – | keep in core |
 | CN | option_expiry | core (drop-one, affected stock-days) | 0.009 | 0.000 | 13.2% | – | – | review: move to monitoring layer |
-| CN | corporate_action | core (drop-one, affected stock-days) | 0.147 | 0.129 | 20.0% | – | – | review: move to monitoring layer |
-| CN | in_play | core (drop-one, affected stock-days) | 0.018 | 0.000 | – | – | – | review: move to monitoring layer |
-| CN | limit_hit | core (drop-one, affected stock-days) | 0.194 | 0.200 | 31.6% | – | – | keep in core |
+| CN | corporate_action | core (drop-one, affected stock-days) | 0.144 | 0.129 | 19.8% | – | – | review: move to monitoring layer |
+| CN | in_play | core (drop-one, affected stock-days) | 0.036 | 0.000 | – | – | – | review: move to monitoring layer |
+| CN | limit_hit | core (drop-one, affected stock-days) | 0.193 | 0.194 | 31.7% | – | – | keep in core |
 | CN | vol_shock | time-series (variance explained) | 0.012 | – | 129.7% | – | 3.708 | keep in core |
-| CN | liq_shock | time-series (variance explained) | 0.003 | – | 148.2% | – | 5.017 | keep in core |
+| CN | liq_shock | time-series (variance explained) | 0.003 | – | 107.3% | – | 3.715 | keep in core |
 | CN | fx | time-series (variance explained) | 0.006 | – | 3.3% | – | 0.086 | keep in core |
 | CN | rates | time-series (variance explained) | 0.010 | – | 2.4% | – | 0.409 | keep in core |
-| CN | us_session | time-series (variance explained) | 0.015 | – | 20.6% | – | 1.918 | keep in core |
+| CN | us_session | time-series (variance explained) | 0.014 | – | 20.6% | – | 1.918 | keep in core |
 
 ### Time-series betas: shrinkage and stability (Section 3.4)
 
@@ -208,20 +208,20 @@ Each factor must earn its place on our own data. Core factors: drop-one marginal
 
 | factor | monthly_stability | mean_shrink_weight | corr_shrunk_vs_true | corr_raw_vs_true |
 |---|---|---|---|---|
-| vol_shock | 0.908 | 0.759 | 0.803 | 0.832 |
-| liq_shock | 0.800 | 0.431 | 0.019 | 0.139 |
-| fx | 0.940 | 0.451 | 0.835 | 0.804 |
-| rates | 0.977 | 0.517 | 0.930 | 0.925 |
+| vol_shock | 0.911 | 0.775 | 0.806 | 0.834 |
+| liq_shock | 0.801 | 0.407 | 0.017 | 0.110 |
+| fx | 0.940 | 0.447 | 0.835 | 0.804 |
+| rates | 0.977 | 0.518 | 0.930 | 0.925 |
 
 **CN**
 
 | factor | monthly_stability | mean_shrink_weight | corr_shrunk_vs_true | corr_raw_vs_true |
 |---|---|---|---|---|
-| vol_shock | 0.891 | 0.646 | 0.570 | 0.654 |
-| liq_shock | 0.787 | 0.283 | 0.223 | 0.336 |
-| fx | 0.906 | 0.191 | 0.730 | 0.550 |
-| rates | 0.956 | 0.193 | 0.924 | 0.672 |
-| us_session | 0.924 | 0.344 | 0.729 | 0.642 |
+| vol_shock | 0.893 | 0.644 | 0.567 | 0.656 |
+| liq_shock | 0.781 | 0.271 | 0.232 | 0.381 |
+| fx | 0.907 | 0.192 | 0.732 | 0.550 |
+| rates | 0.956 | 0.191 | 0.924 | 0.672 |
+| us_session | 0.925 | 0.350 | 0.729 | 0.641 |
 
 Shrinking noisy time-series betas toward the industry average raises their correlation with the true sensitivities where individual estimates are noisiest.
 
@@ -229,8 +229,8 @@ Shrinking noisy time-series betas toward the industry average raises their corre
 
 | index | ledoit_wolf_intensity | macro_day_multiplier |
 |---|---|---|
-| US | 0.398 | 1.578 |
-| CN | 0.400 | 1.178 |
+| US | 0.398 | 1.594 |
+| CN | 0.400 | 1.175 |
 | CRYPTO | 0.257 | – |
 
 ## 5. Factor quality and collinearity
@@ -239,55 +239,55 @@ Shrinking noisy time-series betas toward the industry average raises their corre
 
 | factor | group | ann_vol | ann_return | t_mean | pct_days_abs_t_gt_2 | autocorr_1 |
 |---|---|---|---|---|---|---|
-| market | market | 0.195 | 0.216 | 1.745 | 0.742 | 0.004 |
-| beta | style | 0.053 | 0.029 | 0.868 | 0.298 | -0.027 |
-| size | style | 0.062 | 0.102 | 2.573 | 0.441 | 0.025 |
-| liquidity | style | 0.031 | -0.023 | -1.147 | 0.226 | 0.034 |
-| volatility | style | 0.052 | 0.008 | 0.230 | 0.409 | 0.019 |
-| st_reversal | style | 0.084 | 0.156 | 2.938 | 0.244 | 0.017 |
-| st_momentum | style | 0.051 | 0.020 | 0.621 | 0.192 | -0.023 |
-| overnight_gap | style | 0.053 | -0.008 | -0.232 | 0.158 | 0.050 |
-| crowding | style | 0.043 | -0.018 | -0.646 | 0.361 | -0.057 |
-| etf_ownership | style | 0.032 | -0.029 | -1.412 | 0.237 | 0.074 |
-| retail_attention | style | 0.028 | -0.010 | -0.554 | 0.167 | -0.024 |
-| earnings | event | 0.211 | 0.571 | 2.452 | 0.120 | 0.002 |
-| option_expiry | event | 0.104 | -0.165 | -0.546 | 0.004 | -0.023 |
-| corporate_action | event | 0.056 | -0.323 | -1.988 | 0.004 | 0.154 |
-| in_play | event | 0.324 | -0.112 | -0.177 | 0.022 | -0.030 |
-| crypto_beta | market_specific | 0.582 | 0.247 | 0.669 | 0.335 | 0.039 |
+| market | market | 0.195 | 0.215 | 1.743 | 0.742 | 0.004 |
+| beta | style | 0.053 | 0.031 | 0.927 | 0.292 | -0.025 |
+| size | style | 0.062 | 0.104 | 2.644 | 0.444 | 0.016 |
+| liquidity | style | 0.031 | -0.023 | -1.165 | 0.229 | 0.039 |
+| volatility | style | 0.052 | 0.007 | 0.207 | 0.406 | 0.016 |
+| st_reversal | style | 0.084 | 0.156 | 2.938 | 0.244 | 0.019 |
+| st_momentum | style | 0.051 | 0.011 | 0.340 | 0.186 | -0.017 |
+| overnight_gap | style | 0.052 | -0.015 | -0.450 | 0.160 | 0.044 |
+| crowding | style | 0.043 | -0.016 | -0.596 | 0.367 | -0.056 |
+| etf_ownership | style | 0.032 | -0.030 | -1.455 | 0.242 | 0.071 |
+| retail_attention | style | 0.028 | -0.009 | -0.515 | 0.177 | -0.022 |
+| earnings | event | 0.211 | 0.576 | 2.470 | 0.120 | 0.005 |
+| option_expiry | event | 0.104 | -0.166 | -0.550 | 0.004 | -0.028 |
+| corporate_action | event | 0.056 | -0.320 | -1.987 | 0.003 | 0.139 |
+| in_play | event | 0.324 | -0.149 | -0.235 | 0.022 | -0.029 |
+| crypto_beta | market_specific | 0.581 | 0.262 | 0.711 | 0.337 | 0.040 |
 | vol_shock | timeseries | 1.309 | 0.007 | 0.009 | 0.000 | -0.166 |
-| liq_shock | timeseries | 1.597 | 0.020 | 0.020 | 0.000 | -0.255 |
+| liq_shock | timeseries | 1.079 | 0.011 | 0.017 | 0.000 | 0.010 |
 | fx | timeseries | 0.074 | -0.003 | -0.064 | 0.000 | -0.018 |
 | rates | timeseries | 0.073 | 0.035 | 0.796 | 0.000 | 0.085 |
-| stat_1 | statistical | 0.030 | 0.001 | 0.044 | 0.000 | 0.083 |
-| stat_2 | statistical | 0.022 | 0.005 | 0.339 | 0.000 | 0.036 |
+| stat_1 | statistical | 0.030 | 0.001 | 0.053 | 0.000 | 0.078 |
+| stat_2 | statistical | 0.022 | 0.018 | 1.176 | 0.000 | 0.001 |
 
 **CN**
 
 | factor | group | ann_vol | ann_return | t_mean | pct_days_abs_t_gt_2 | autocorr_1 |
 |---|---|---|---|---|---|---|
-| market | market | 0.278 | 0.147 | 0.819 | 0.718 | 0.022 |
-| beta | style | 0.083 | -0.032 | -0.601 | 0.265 | 0.051 |
-| size | style | 0.092 | 0.034 | 0.581 | 0.384 | 0.019 |
-| liquidity | style | 0.043 | 0.024 | 0.839 | 0.142 | 0.022 |
-| volatility | style | 0.075 | -0.074 | -1.536 | 0.351 | 0.006 |
-| st_reversal | style | 0.127 | 0.109 | 1.320 | 0.217 | -0.022 |
-| st_momentum | style | 0.076 | -0.000 | -0.002 | 0.124 | 0.023 |
-| overnight_gap | style | 0.076 | -0.087 | -1.764 | 0.127 | -0.019 |
-| crowding | style | 0.043 | -0.028 | -0.998 | 0.135 | 0.000 |
-| etf_ownership | style | 0.049 | -0.017 | -0.538 | 0.160 | -0.014 |
-| retail_attention | style | 0.044 | 0.026 | 0.914 | 0.142 | 0.030 |
-| earnings | event | 0.314 | 0.053 | 0.121 | 0.060 | 0.077 |
-| option_expiry | event | 0.135 | -0.372 | -0.950 | 0.000 | 0.054 |
-| corporate_action | event | 0.189 | -0.132 | -0.267 | 0.006 | -0.245 |
-| limit_hit | market_specific | 0.313 | 3.183 | 8.774 | 0.060 | 0.024 |
+| market | market | 0.278 | 0.146 | 0.816 | 0.717 | 0.022 |
+| beta | style | 0.083 | -0.034 | -0.627 | 0.264 | 0.053 |
+| size | style | 0.092 | 0.035 | 0.599 | 0.381 | 0.017 |
+| liquidity | style | 0.044 | 0.024 | 0.847 | 0.142 | 0.023 |
+| volatility | style | 0.075 | -0.074 | -1.535 | 0.348 | 0.005 |
+| st_reversal | style | 0.128 | 0.106 | 1.292 | 0.214 | -0.019 |
+| st_momentum | style | 0.076 | -0.011 | -0.228 | 0.124 | 0.034 |
+| overnight_gap | style | 0.077 | -0.094 | -1.909 | 0.126 | -0.010 |
+| crowding | style | 0.043 | -0.029 | -1.030 | 0.135 | -0.000 |
+| etf_ownership | style | 0.049 | -0.018 | -0.562 | 0.162 | -0.012 |
+| retail_attention | style | 0.044 | 0.027 | 0.960 | 0.144 | 0.029 |
+| earnings | event | 0.315 | 0.065 | 0.148 | 0.060 | 0.084 |
+| option_expiry | event | 0.135 | -0.392 | -1.002 | 0.000 | 0.060 |
+| corporate_action | event | 0.188 | -0.125 | -0.255 | 0.006 | -0.256 |
+| limit_hit | market_specific | 0.314 | 3.130 | 8.605 | 0.058 | 0.026 |
 | vol_shock | timeseries | 1.252 | 0.055 | 0.071 | 0.000 | -0.210 |
-| liq_shock | timeseries | 1.418 | 0.028 | 0.032 | 0.000 | -0.238 |
+| liq_shock | timeseries | 1.031 | 0.022 | 0.035 | 0.000 | 0.005 |
 | fx | timeseries | 0.033 | -0.006 | -0.313 | 0.000 | -0.079 |
 | rates | timeseries | 0.025 | -0.010 | -0.664 | 0.000 | 0.001 |
 | us_session | timeseries | 0.195 | 0.189 | 1.544 | 0.000 | -0.006 |
-| stat_1 | statistical | 0.037 | 0.008 | 0.293 | 0.000 | -0.020 |
-| stat_2 | statistical | 0.031 | 0.024 | 1.077 | 0.000 | 0.005 |
+| stat_1 | statistical | 0.037 | 0.008 | 0.291 | 0.000 | -0.023 |
+| stat_2 | statistical | 0.031 | 0.026 | 1.182 | 0.000 | 0.006 |
 
 **CRYPTO**
 
@@ -368,27 +368,27 @@ Named factors only:
 
 | a | b | rho | p_value | flag |
 |---|---|---|---|---|
-| A1_US_STATARB | D1_US_CROWDING | 0.238 | 0.000 | yes |
-| A1_US_STATARB | C1_US_EVENT | 0.140 | 0.001 | no |
-| B1_US_INTRADAY | D1_US_CROWDING | -0.115 | 0.005 | no |
-| A2_CN_STATARB | D1_US_CROWDING | -0.089 | 0.032 | no |
-| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.068 | 0.099 | no |
-| B1_US_INTRADAY | C1_US_EVENT | 0.062 | 0.135 | no |
-| D1_US_CROWDING | E1_CRYPTO_CARRY | -0.058 | 0.159 | no |
-| C1_US_EVENT | D1_US_CROWDING | 0.046 | 0.267 | no |
+| A1_US_STATARB | D1_US_CROWDING | 0.239 | 0.000 | yes |
+| A1_US_STATARB | C1_US_EVENT | 0.142 | 0.001 | no |
+| B1_US_INTRADAY | D1_US_CROWDING | -0.114 | 0.005 | no |
+| A2_CN_STATARB | D1_US_CROWDING | -0.090 | 0.028 | no |
+| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.069 | 0.095 | no |
+| B1_US_INTRADAY | C1_US_EVENT | 0.067 | 0.103 | no |
+| D1_US_CROWDING | E1_CRYPTO_CARRY | -0.057 | 0.168 | no |
+| A1_US_STATARB | A2_CN_STATARB | -0.046 | 0.261 | no |
 
 Core model (named + statistical):
 
 | a | b | rho | p_value | flag |
 |---|---|---|---|---|
-| A1_US_STATARB | D1_US_CROWDING | 0.184 | 0.000 | yes |
-| B1_US_INTRADAY | D1_US_CROWDING | -0.106 | 0.010 | no |
-| A1_US_STATARB | C1_US_EVENT | 0.088 | 0.033 | no |
-| A2_CN_STATARB | D1_US_CROWDING | -0.075 | 0.069 | no |
-| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.068 | 0.101 | no |
-| B1_US_INTRADAY | C1_US_EVENT | 0.068 | 0.101 | no |
-| A1_US_STATARB | A2_CN_STATARB | -0.044 | 0.287 | no |
-| A2_CN_STATARB | B1_US_INTRADAY | 0.039 | 0.346 | no |
+| A1_US_STATARB | D1_US_CROWDING | 0.187 | 0.000 | yes |
+| B1_US_INTRADAY | D1_US_CROWDING | -0.107 | 0.010 | no |
+| A1_US_STATARB | C1_US_EVENT | 0.087 | 0.034 | no |
+| A2_CN_STATARB | D1_US_CROWDING | -0.077 | 0.063 | no |
+| B1_US_INTRADAY | C1_US_EVENT | 0.073 | 0.077 | no |
+| B1_US_INTRADAY | E1_CRYPTO_CARRY | 0.070 | 0.091 | no |
+| A1_US_STATARB | A2_CN_STATARB | -0.043 | 0.293 | no |
+| A2_CN_STATARB | B1_US_INTRADAY | 0.036 | 0.382 | no |
 
 ### PCA on US named-model residuals (last 250 days, 287 stocks)
 
@@ -396,29 +396,29 @@ Marchenko-Pastur edge 4.29; eigenvalues above edge: **7**; after statistical fac
 
 | index | eigenvalue |
 |---|---|
-| 1.000 | 8.335 |
-| 2.000 | 6.371 |
-| 3.000 | 5.803 |
-| 4.000 | 5.419 |
-| 5.000 | 4.984 |
+| 1.000 | 8.342 |
+| 2.000 | 6.301 |
+| 3.000 | 5.893 |
+| 4.000 | 5.397 |
+| 5.000 | 4.921 |
 
 | pc | candidate | corr |
 |---|---|---|
-| 1 | theme:AI infrastructure | -0.578 |
-| 1 | slow:value | 0.085 |
-| 1 | sector:Communication | 0.071 |
-| 2 | slow:value | -0.097 |
+| 1 | theme:AI infrastructure | -0.575 |
+| 1 | slow:value | 0.082 |
+| 1 | sector:Communication | 0.072 |
+| 2 | slow:value | -0.104 |
 | 2 | slow:momentum_12_1 | 0.092 |
-| 2 | sector:Industrials | -0.052 |
-| 3 | slow:value | -0.280 |
-| 3 | slow:earnings_yield | -0.244 |
-| 3 | theme:AI infrastructure | 0.195 |
-| 4 | slow:value | -0.270 |
+| 2 | slow:earnings_yield | -0.054 |
+| 3 | slow:value | -0.284 |
+| 3 | slow:earnings_yield | -0.247 |
+| 3 | theme:AI infrastructure | 0.198 |
+| 4 | slow:value | -0.268 |
 | 4 | slow:earnings_yield | -0.187 |
 | 4 | theme:AI infrastructure | -0.159 |
-| 5 | slow:value | -0.134 |
-| 5 | slow:earnings_yield | -0.102 |
-| 5 | sector:Financials | -0.086 |
+| 5 | slow:value | -0.147 |
+| 5 | slow:earnings_yield | -0.115 |
+| 5 | sector:Financials | -0.089 |
 
 ### PCA on CN named-model residuals (last 250 days, 152 stocks)
 
@@ -426,29 +426,29 @@ Marchenko-Pastur edge 3.17; eigenvalues above edge: **2**; after statistical fac
 
 | index | eigenvalue |
 |---|---|
-| 1.000 | 3.821 |
-| 2.000 | 3.488 |
+| 1.000 | 3.819 |
+| 2.000 | 3.490 |
 | 3.000 | 3.128 |
-| 4.000 | 3.000 |
+| 4.000 | 3.003 |
 | 5.000 | 2.942 |
 
 | pc | candidate | corr |
 |---|---|---|
-| 1 | slow:momentum_12_1 | -0.272 |
-| 1 | shortable | 0.135 |
-| 1 | slow:long_term_reversal | 0.086 |
-| 2 | slow:value | -0.386 |
+| 1 | slow:momentum_12_1 | -0.270 |
+| 1 | shortable | 0.137 |
+| 1 | slow:long_term_reversal | 0.085 |
+| 2 | slow:value | -0.387 |
 | 2 | slow:earnings_yield | -0.376 |
-| 2 | slow:long_term_reversal | -0.162 |
+| 2 | slow:long_term_reversal | -0.164 |
 | 3 | slow:momentum_12_1 | -0.259 |
 | 3 | sector:Autos | 0.101 |
-| 3 | slow:earnings_yield | 0.087 |
-| 4 | slow:momentum_12_1 | -0.088 |
-| 4 | shortable | -0.068 |
-| 4 | slow:long_term_reversal | -0.055 |
-| 5 | slow:long_term_reversal | -0.103 |
-| 5 | sector:Non-bank Financials | 0.100 |
-| 5 | sector:Real Estate | -0.068 |
+| 3 | slow:earnings_yield | 0.085 |
+| 4 | slow:momentum_12_1 | -0.089 |
+| 4 | shortable | -0.069 |
+| 4 | slow:long_term_reversal | -0.060 |
+| 5 | slow:long_term_reversal | -0.101 |
+| 5 | sector:Non-bank Financials | 0.099 |
+| 5 | sector:Real Estate | -0.069 |
 
 ### Shared residual shocks (≥3 strategies below -2σ on the same day)
 
@@ -456,18 +456,18 @@ None.
 
 ## 7. Regimes and cross-market structure
 
-- Regime classification accuracy vs simulated truth: 87.7%.
+- Regime classification accuracy vs simulated truth: 87.5%.
 
 ![regimes](charts/regimes.png)
 
-| leader | follower | corr_same_day | corr_leader_lag1 |
-|---|---|---|---|
-| US:market | CN:market | -0.002 | 0.161 |
-| US:market | CRYPTO:market | 0.050 | 0.012 |
-| CRYPTO:market | US:crypto_beta | 0.657 | 0.027 |
-| US:crypto_beta | CRYPTO:market | 0.657 | 0.019 |
+| leader | follower | corr_same_day | corr_leader_lag1 | corr_same_day_synchronised | corr_weekly |
+|---|---|---|---|---|---|
+| US:market | CN:market | -0.002 | 0.161 | 0.193 | 0.094 |
+| US:market | CRYPTO:market | 0.051 | 0.012 | 0.051 | 0.054 |
+| CRYPTO:market | US:crypto_beta | 0.656 | 0.026 | 0.656 | 0.773 |
+| US:crypto_beta | CRYPTO:market | 0.656 | 0.020 | 0.656 | 0.773 |
 
-CN market follows the previous US session; the global layer's Newey-West lag term captures this.
+CN market follows the previous US session; the global layer synchronises CN returns to the US close (Burns, Engle and Mezrich 1998) before estimating cross-market correlations.
 
 ## 8. Historical event replay
 
@@ -475,34 +475,34 @@ Did forecasts flag the risk beforehand, and does attribution explain the loss af
 
 | episode | date | strategy | pred_vol_t-1 | pred_vol_month_before | forecast_rose_pct | hold_pnl | z_score | factor | specific | trading_and_costs | factor_share_of_loss |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Global carry-trade unwind | 2024-08-05 | A1_US_STATARB | 245,606 | 268,184 | -8.419 | -0.52m | -2.099 | -0.79m | 0.28m | -51,013 | 152.9% |
-| Global carry-trade unwind | 2024-08-05 | B1_US_INTRADAY | 42,444 | 32,062 | 32.382 | -80,709 | -1.902 | -0.12m | 40,899 | -0.32m | 151.9% |
-| Global carry-trade unwind | 2024-08-05 | C1_US_EVENT | 123,265 | 240,360 | -48.717 | 0.77m | 6.284 | 0.42m | 0.35m | -0.13m | – |
-| Global carry-trade unwind | 2024-08-05 | D1_US_CROWDING | 193,977 | 166,604 | 16.430 | -0.35m | -1.812 | -0.20m | -0.15m | -51,847 | 58.0% |
-| Quant deleveraging | 2025-03-11 | A1_US_STATARB | 157,897 | 199,561 | -20.878 | -0.34m | -2.134 | -0.23m | -0.12m | -0.13m | 69.1% |
-| Quant deleveraging | 2025-03-11 | B1_US_INTRADAY | 29,241 | 27,072 | 8.014 | -49,593 | -1.696 | -37,423 | -11,210 | -0.16m | 75.5% |
-| Quant deleveraging | 2025-03-11 | C1_US_EVENT | 192,240 | 161,640 | 18.932 | 0.18m | 0.919 | 0.25m | -56,413 | -92 | – |
-| Quant deleveraging | 2025-03-11 | D1_US_CROWDING | 156,740 | 164,968 | -4.987 | -0.48m | -3.061 | -0.40m | -86,924 | -21,111 | 83.0% |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | A1_US_STATARB | 230,947 | 262,799 | -12.120 | -0.40m | -1.735 | -0.34m | -28,425 | -0.21m | 83.8% |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | B1_US_INTRADAY | 35,823 | 33,560 | 6.742 | -0.10m | -2.902 | -0.11m | 8,487 | -0.51m | 108.1% |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | C1_US_EVENT | 218,668 | 215,815 | 1.322 | 0.61m | 2.795 | 0.43m | 0.19m | -693 | – |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | D1_US_CROWDING | 190,147 | 213,717 | -11.029 | 0.69m | 3.625 | 0.78m | -68,663 | -43,482 | – |
-| Crypto liquidation cascade | 2025-10-10 | A1_US_STATARB | 224,632 | 212,207 | 5.855 | -1.01m | -4.496 | -1.09m | 92,511 | 40,814 | 108.1% |
-| Crypto liquidation cascade | 2025-10-10 | B1_US_INTRADAY | 27,597 | 30,324 | -8.994 | -0.13m | -4.890 | -0.16m | 29,499 | 62,927 | 120.5% |
-| Crypto liquidation cascade | 2025-10-10 | C1_US_EVENT | 137,975 | 169,232 | -18.470 | 90,070 | 0.653 | -0.11m | 0.17m | -1,014 | – |
-| Crypto liquidation cascade | 2025-10-10 | D1_US_CROWDING | 172,296 | 190,514 | -9.563 | -0.59m | -3.407 | -0.51m | -70,153 | -31,936 | 87.3% |
-| Momentum/value rotation | 2025-11-10 | A1_US_STATARB | 272,459 | 325,986 | -16.420 | -0.13m | -0.473 | -71,993 | 36,681 | -0.16m | 55.9% |
-| Momentum/value rotation | 2025-11-10 | B1_US_INTRADAY | 40,418 | 37,880 | 6.700 | 63,107 | 1.561 | 23,655 | 25,831 | 0.34m | – |
-| Momentum/value rotation | 2025-11-10 | C1_US_EVENT | 141,199 | 175,079 | -19.351 | 0.22m | 1.540 | 0.17m | 0.13m | -12,124 | – |
-| Momentum/value rotation | 2025-11-10 | D1_US_CROWDING | 248,642 | 243,345 | 2.176 | 0.34m | 1.372 | 0.16m | 0.22m | 3,011 | – |
-| Retail short squeeze | 2026-01-27 | A1_US_STATARB | 299,651 | 221,939 | 35.015 | 0.22m | 0.732 | -0.16m | 0.39m | -45,818 | – |
-| Retail short squeeze | 2026-01-27 | B1_US_INTRADAY | 37,091 | 28,939 | 28.172 | 43,868 | 1.183 | 15,501 | 18,407 | -57,867 | – |
-| Retail short squeeze | 2026-01-27 | C1_US_EVENT | 677,773 | 120,506 | 462 | 1.03m | 1.516 | 0.55m | 0.51m | -0.22m | – |
-| Retail short squeeze | 2026-01-27 | D1_US_CROWDING | 238,954 | 203,237 | 17.575 | -0.17m | -0.732 | -0.14m | 3,647 | -9,240 | 80.6% |
-| Global carry-trade unwind | 2024-08-05 | A2_CN_STATARB | 102,153 | 102,895 | -0.721 | 95,921 | 0.939 | -79,972 | 0.18m | -97,916 | – |
-| Quant deleveraging | 2025-03-11 | A2_CN_STATARB | 81,696 | 129,970 | -37.143 | 38,793 | 0.475 | 58,116 | -12,618 | -96,384 | – |
-| Tariff shock / CN limit-down cascade | 2025-04-07 | A2_CN_STATARB | 123,025 | 137,266 | -10.375 | -0.16m | -1.284 | -43,463 | -0.11m | -67,013 | 27.5% |
-| Momentum/value rotation | 2025-11-10 | A2_CN_STATARB | 144,219 | 128,865 | 11.915 | -22,307 | -0.155 | 11,811 | -11,816 | -63,174 | -52.9% |
+| Global carry-trade unwind | 2024-08-05 | A1_US_STATARB | 238,809 | 265,213 | -9.956 | -0.52m | -2.158 | -0.78m | 0.27m | -51,013 | 151.6% |
+| Global carry-trade unwind | 2024-08-05 | B1_US_INTRADAY | 41,613 | 31,634 | 31.546 | -80,709 | -1.940 | -0.13m | 44,009 | -0.32m | 155.5% |
+| Global carry-trade unwind | 2024-08-05 | C1_US_EVENT | 120,316 | 239,369 | -49.736 | 0.77m | 6.438 | 0.40m | 0.38m | -0.13m | – |
+| Global carry-trade unwind | 2024-08-05 | D1_US_CROWDING | 191,491 | 163,056 | 17.438 | -0.35m | -1.836 | -0.20m | -0.16m | -51,847 | 57.2% |
+| Quant deleveraging | 2025-03-11 | A1_US_STATARB | 158,181 | 201,449 | -21.478 | -0.34m | -2.130 | -0.22m | -0.13m | -0.13m | 65.5% |
+| Quant deleveraging | 2025-03-11 | B1_US_INTRADAY | 29,080 | 27,131 | 7.182 | -49,593 | -1.705 | -37,119 | -11,547 | -0.16m | 74.8% |
+| Quant deleveraging | 2025-03-11 | C1_US_EVENT | 191,570 | 162,569 | 17.839 | 0.18m | 0.922 | 0.24m | -44,816 | -92 | – |
+| Quant deleveraging | 2025-03-11 | D1_US_CROWDING | 155,623 | 164,783 | -5.559 | -0.48m | -3.083 | -0.40m | -89,778 | -21,111 | 82.4% |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | A1_US_STATARB | 235,340 | 271,597 | -13.349 | -0.40m | -1.702 | -0.32m | -41,481 | -0.21m | 80.6% |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | B1_US_INTRADAY | 36,004 | 33,933 | 6.102 | -0.10m | -2.887 | -0.11m | 6,694 | -0.51m | 106.2% |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | C1_US_EVENT | 218,645 | 215,771 | 1.332 | 0.61m | 2.795 | 0.42m | 0.19m | -693 | – |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | D1_US_CROWDING | 198,110 | 218,538 | -9.348 | 0.69m | 3.479 | 0.77m | -66,421 | -43,482 | – |
+| Crypto liquidation cascade | 2025-10-10 | A1_US_STATARB | 225,961 | 212,611 | 6.279 | -1.01m | -4.469 | -1.09m | 88,767 | 40,814 | 107.9% |
+| Crypto liquidation cascade | 2025-10-10 | B1_US_INTRADAY | 27,577 | 30,368 | -9.192 | -0.13m | -4.894 | -0.16m | 32,129 | 62,927 | 121.9% |
+| Crypto liquidation cascade | 2025-10-10 | C1_US_EVENT | 137,098 | 169,261 | -19.002 | 90,070 | 0.657 | -0.13m | 0.19m | -1,014 | – |
+| Crypto liquidation cascade | 2025-10-10 | D1_US_CROWDING | 172,395 | 190,430 | -9.471 | -0.59m | -3.405 | -0.51m | -69,832 | -31,936 | 87.3% |
+| Momentum/value rotation | 2025-11-10 | A1_US_STATARB | 268,098 | 324,927 | -17.490 | -0.13m | -0.481 | -70,209 | 40,586 | -0.16m | 54.5% |
+| Momentum/value rotation | 2025-11-10 | B1_US_INTRADAY | 40,192 | 37,807 | 6.309 | 63,107 | 1.570 | 24,231 | 24,481 | 0.34m | – |
+| Momentum/value rotation | 2025-11-10 | C1_US_EVENT | 139,687 | 175,684 | -20.490 | 0.22m | 1.556 | 0.17m | 0.13m | -12,124 | – |
+| Momentum/value rotation | 2025-11-10 | D1_US_CROWDING | 248,519 | 241,426 | 2.938 | 0.34m | 1.373 | 0.16m | 0.22m | 3,011 | – |
+| Retail short squeeze | 2026-01-27 | A1_US_STATARB | 298,854 | 221,721 | 34.788 | 0.22m | 0.734 | -0.17m | 0.40m | -45,818 | – |
+| Retail short squeeze | 2026-01-27 | B1_US_INTRADAY | 37,105 | 28,816 | 28.768 | 43,868 | 1.182 | 15,143 | 18,402 | -57,867 | – |
+| Retail short squeeze | 2026-01-27 | C1_US_EVENT | 679,120 | 120,893 | 462 | 1.03m | 1.513 | 0.55m | 0.50m | -0.22m | – |
+| Retail short squeeze | 2026-01-27 | D1_US_CROWDING | 238,239 | 202,349 | 17.737 | -0.17m | -0.734 | -0.14m | 4,467 | -9,240 | 81.1% |
+| Global carry-trade unwind | 2024-08-05 | A2_CN_STATARB | 100,970 | 100,679 | 0.289 | 95,921 | 0.950 | -74,472 | 0.17m | -97,916 | – |
+| Quant deleveraging | 2025-03-11 | A2_CN_STATARB | 81,997 | 130,164 | -37.005 | 38,793 | 0.473 | 58,812 | -10,192 | -96,384 | – |
+| Tariff shock / CN limit-down cascade | 2025-04-07 | A2_CN_STATARB | 124,423 | 141,858 | -12.291 | -0.16m | -1.269 | -30,525 | -0.13m | -67,013 | 19.3% |
+| Momentum/value rotation | 2025-11-10 | A2_CN_STATARB | 143,795 | 128,738 | 11.696 | -22,307 | -0.155 | 11,711 | -9,584 | -63,174 | -52.5% |
 | Global carry-trade unwind | 2024-08-05 | E1_CRYPTO_CARRY | 213,500 | 176,846 | 20.726 | 0.69m | 3.226 | -0.46m | 1.15m | -0.42m | – |
 | Tariff shock / CN limit-down cascade | 2025-04-07 | E1_CRYPTO_CARRY | 213,733 | 193,671 | 10.359 | 0.22m | 1.042 | 0.18m | 40,011 | 50,993 | – |
 | Crypto liquidation cascade | 2025-10-10 | E1_CRYPTO_CARRY | 260,861 | 190,781 | 36.733 | 0.29m | 1.124 | 38,744 | 0.25m | -90,673 | – |
@@ -515,10 +515,10 @@ Bar-level bias statistics of start-of-bar holdings P&L. With the U-shaped profil
 
 | strategy | mean_seasonal | dispersion_seasonal | mean_flat | dispersion_flat |
 |---|---|---|---|---|
-| A1_US_STATARB | 0.840 | 0.047 | 0.831 | 0.167 |
-| B1_US_INTRADAY | 0.801 | 0.057 | 0.793 | 0.170 |
-| C1_US_EVENT | 0.794 | 0.090 | 0.786 | 0.165 |
-| D1_US_CROWDING | 0.793 | 0.093 | 0.779 | 0.136 |
+| A1_US_STATARB | 0.843 | 0.047 | 0.835 | 0.167 |
+| B1_US_INTRADAY | 0.801 | 0.057 | 0.794 | 0.170 |
+| C1_US_EVENT | 0.795 | 0.090 | 0.787 | 0.165 |
+| D1_US_CROWDING | 0.794 | 0.093 | 0.780 | 0.136 |
 
 ![seasonality](charts/seasonality_bias_A1.png)
 
@@ -549,5 +549,5 @@ Average stock beta to index futures: daily 0.85, concurrent 30-minute 0.78, lag-
 | Reconciliation | attribution vs official P&L | 99.83% of strategy-days within tolerance |
 | Intraday reconciliation | bar-level vs daily MTM | max |diff| $0 |
 | Stability | style exposure day-on-day corr (US) | 0.83 |
-| Early warning | drift alerts / release changes flagged | 114 alerts; 28 material release changes |
+| Early warning | drift alerts / release changes flagged | 117 alerts; 28 material release changes |
 | Decision impact / adoption | documented decisions, report usage | tracked in production (decision log), not measurable on synthetic data |

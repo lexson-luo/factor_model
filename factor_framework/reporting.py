@@ -843,7 +843,8 @@ def write_validation_report(res, out: Path) -> str:
     lines += ["## 7. Regimes and cross-market structure", "",
               f"- Regime classification accuracy vs simulated truth: {V.get('regime_accuracy', np.nan):.1%}.", "",
               "![regimes](charts/regimes.png)", "", md_table(D["lead_lag"]), "",
-              "CN market follows the previous US session; the global layer's Newey-West lag term captures this.", ""]
+              "CN market follows the previous US session; the global layer synchronises CN returns to the US close "
+              "(Burns, Engle and Mezrich 1998) before estimating cross-market correlations.", ""]
     if "event_replay" in V:
         lines += ["## 8. Historical event replay", "",
                   "Did forecasts flag the risk beforehand, and does attribution explain the loss afterwards?", "",

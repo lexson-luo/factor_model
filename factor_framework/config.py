@@ -132,7 +132,7 @@ MACRO_SENSITIVE = ("market", "rates", "fx", "vol_shock")   # factor risk scaled 
 # MarketSpec.ts_factors.
 TS_FACTOR_DESCRIPTIONS = {
     "vol_shock": "change in log implied volatility index",
-    "liq_shock": "market liquidity shock: change in log aggregate spread minus change in log depth",
+    "liq_shock": "market liquidity shock: change in the filtered level of log aggregate spread minus log depth",
     "fx": "local currency return (US: dollar index; CN: USDCNY)",
     "rates": "10-year government bond futures return",
     "us_session": "previous US session index-futures return (Asian markets)",
@@ -202,6 +202,12 @@ class ModelConfig:
     eigen_every: int = 5               # recompute eigen adjustment every k days
     event_specific_mult: float = 3.0   # extra specific vol on known event days
     cov_min_obs: int = 60
+    # global layer: blocks whose close precedes the reference (US) close, and the
+    # reference-market factors used to synchronise them (Burns, Engle and Mezrich 1998)
+    sync_leads: tuple = (("CN", ("US:market",)),)
+    # global layer: local factors that, synchronised, are another block's factor seen late.
+    # Exposure maps onto the target with a point-in-time beta; the remainder is a basis factor.
+    map_factors: tuple = (("CN:us_session", "US:market"),)
     macro_mult_cap: float = 6.0        # cap on macro-day variance uplift (US rates ~6x on macro days)
     macro_per_factor: bool = True      # one uplift per macro-sensitive factor instead of the market's for all
     macro_prior_obs: float = 10.0      # pseudo macro days shrinking each per-factor uplift toward 1
