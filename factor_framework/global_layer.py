@@ -85,8 +85,12 @@ class GlobalRiskLayer:
         for t in range(T):
             if t > cfg.cov_min_obs:
                 S = (G0 + G1 + G1.T) / w
-                sd = np.sqrt(np.clip(np.diag(S), 1e-14, None))
-                C = S / np.outer(sd, sd)
+                # standardise by the contemporaneous variances: the lag terms correct cross
+                # correlations, but on a factor's own variance they give var * (1 + 2 rho_1),
+                # which turns negative for strongly mean-reverting series (e.g. liq_shock)
+                sd = np.sqrt(np.clip(np.diag(G0) / w, 1e-14, None))
+                C = np.clip(S / np.outer(sd, sd), -1.0, 1.0)
+                np.fill_diagonal(C, 1.0)
                 vol = np.zeros(K)
                 M = np.zeros((K, K))
                 for name, cols in self.blocks.items():
@@ -99,7 +103,7 @@ class GlobalRiskLayer:
                     k = rm.dates.searchsorted(self.calendar[t], "right") - 1
                     Floc = rm.F[k] if k >= 0 else None
                     if Floc is None or not np.isfinite(Floc).all():
-                        Floc = np.diag(np.diag(S)[ii])
+                        Floc = np.diag(sd[ii] ** 2)
                     M[np.ix_(ii, ii)] = Floc
                     vol[ii] = np.sqrt(np.clip(np.diag(Floc), 0, None))
                 cross = C * np.outer(vol, vol)

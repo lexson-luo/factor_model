@@ -77,6 +77,30 @@ def test_slow_block_leaves_core_covariance_unchanged_and_is_psd():
     assert min(np.linalg.eigvalsh(F[t]).min() for t in np.where(live)[0]) > 0
 
 
+def test_global_layer_survives_mean_reverting_factor():
+    """A factor with lag-1 autocorrelation below -0.5 has a negative Newey-West variance;
+    the cross-correlations must stay valid and leave the local diagonal blocks intact."""
+    from types import SimpleNamespace
+    from factor_framework.global_layer import GlobalRiskLayer
+    rng = np.random.default_rng(5)
+    T = 300
+    cal = pd.bdate_range("2024-01-01", periods=T)
+    alt = (-1.0) ** np.arange(T) * 0.01 * (1 + 0.1 * rng.normal(size=T))   # rho_1 ~ -1
+    a = pd.DataFrame({"shock": alt, "mkt": rng.normal(0, 0.01, T)}, index=cal)
+    b = pd.DataFrame({"mkt": 0.5 * a.mkt.values + rng.normal(0, 0.01, T)}, index=cal)
+    Fa, Fb = np.diag([1e-4, 1e-4]), np.array([[1.25e-4]])
+    rms = {"A": SimpleNamespace(dates=cal, F=np.repeat(Fa[None], T, 0)),
+           "B": SimpleNamespace(dates=cal, F=np.repeat(Fb[None], T, 0))}
+    g = GlobalRiskLayer(rms, {"A": a, "B": b}, pd.Series(0.14, index=cal), cal).build()
+    t = T - 1
+    assert np.isfinite(g.G[t]).all()
+    ia = [g.factors.index(f) for f in g.blocks["A"]]
+    assert np.allclose(g.G[t][np.ix_(ia, ia)], Fa, rtol=0.05, atol=1e-6)
+    fr = g.firm_risk(t, {"A": pd.Series({"shock": 1e6, "mkt": 1e6}), "B": pd.Series({"mkt": 1e6})}, {})
+    assert fr.total_vol <= fr.standalone_vol.sum() + 1e-6               # |block correlation| <= 1
+    assert (fr.contribution.abs() <= fr.standalone_vol + 1e-6).all()
+
+
 def test_carino_linking_adds_up():
     rng = np.random.default_rng(4)
     comp = pd.DataFrame(rng.normal(0, 0.005, (50, 3)), columns=list("abc"))

@@ -4,15 +4,15 @@
 
 ## Firm risk
 
-- Gross exposure: **188.9m USD**; predicted daily vol **0.42m** (annualised 6.7m, 3.5% of gross); 1-day 99% normal VaR **0.98m**.
+- Gross exposure: **188.9m USD**; predicted daily vol **0.43m** (annualised 6.9m, 3.6% of gross); 1-day 99% normal VaR **1.01m**.
 - Diversification benefit across local models: 0.28m daily vol.
 
 | index | standalone_daily_vol | contribution_daily_vol | share |
 |---|---|---|---|
-| US | 0.30m | 0.20m | 48.4% |
-| CN | 0.11m | 27,548 | 6.6% |
-| CRYPTO | 0.29m | 0.19m | 45.1% |
-| FX | 1,293 | 10 | 0.0% |
+| US | 0.31m | 0.21m | 49.6% |
+| CN | 0.11m | 24,683 | 5.7% |
+| CRYPTO | 0.29m | 0.19m | 44.7% |
+| FX | 1,250 | 30 | 0.0% |
 
 ![firm risk](charts/firm_risk.png)
 
@@ -20,16 +20,16 @@
 
 | index | contribution_daily_vol | share_of_firm_vol |
 |---|---|---|
-| CRYPTO:funding | 70,392 | 16.8% |
-| CRYPTO:sec_Smart Contract L1 | 45,279 | 10.8% |
-| US:st_reversal | 33,303 | 7.9% |
-| US:volatility | 26,043 | 6.2% |
-| US:crowding | 23,952 | 5.7% |
-| US:crypto_beta | 18,512 | 4.4% |
-| CN:size | 11,802 | 2.8% |
-| CRYPTO:btc_beta | -10,799 | -2.6% |
-| US:ind_Energy | 8,047 | 1.9% |
-| US:fx | 7,954 | 1.9% |
+| CRYPTO:funding | 72,802 | 16.9% |
+| CRYPTO:sec_Smart Contract L1 | 44,939 | 10.4% |
+| US:st_reversal | 38,214 | 8.9% |
+| US:volatility | 33,477 | 7.8% |
+| US:crypto_beta | 23,238 | 5.4% |
+| US:crowding | 20,019 | 4.6% |
+| CN:size | 10,740 | 2.5% |
+| CRYPTO:btc_beta | -10,113 | -2.3% |
+| US:fx | 8,407 | 1.9% |
+| US:ind_Energy | 7,901 | 1.8% |
 
 ## Limit status (latest day)
 
