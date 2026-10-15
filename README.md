@@ -31,7 +31,7 @@ sensitivities `B` are estimated. A few statistical residual factors catch what n
 | Validation | `validation.py` | Bias statistics, R², VIF, stability, challengers, truth recovery, event replay; **factor selection tests** (drop-one / add-one, affected-stock R² for events, variance explained for time-series factors); time-series beta stability and shrinkage |
 | Calibration | `calibration.py` | Synthetic data only: rebuilds the simulator's true conditional covariance and compares forecasts with it for strategy books, random, cap-weighted and model-optimised portfolios; layer ablation; parameter tuning on a fit half with a held-out half (`run_calibration.py` → `calibration_report.md`) |
 | Stress & limits | `stress.py`, `limits.py` | Hypothetical scenarios including vol, liquidity, FX, rates and prior-session shocks, scaled up for crowded factors; historical and model-free replays; liquidity stress; **internal crowding** (firm exit cost vs standalone); limits including expected loss in a 3-sigma vol/liquidity shock (worse of model and empirical) |
-| 7. Reporting | `reporting.py` | `risk_report.md`, `pm_report.md`, `management_summary.md`, `validation_report.md`, plus charts and CSV tables |
+| 7. Reporting | `reporting.py`, `html_report.py` | `risk_report.md`, `pm_report.md`, `management_summary.md`, `validation_report.md` (each also as a self-contained `.html` with embedded charts), plus charts and CSV tables |
 
 All tunable settings live in `factor_framework/config.py`: factor taxonomy, time-series factors per
 market, candidates, orthogonalisation order, half-lives, limits and scenarios.

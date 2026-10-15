@@ -9,6 +9,7 @@ Outputs (in ``output/``):
   pm_report.md            Quant traders / PMs
   management_summary.md   Senior management / capital allocation
   validation_report.md    Model validation and usefulness scorecard
+  *.html                  Self-contained HTML version of each report (charts embedded)
   charts/*.png            Figures referenced by the reports
   tables/*.csv            Every table, for drill-down
 """
@@ -28,6 +29,7 @@ from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 from .attribution import COMPONENTS  # noqa: E402
 from .config import TRADING_DAYS  # noqa: E402
 from .diagnostics import SURROGATE_MIN_R2_OOS  # noqa: E402
+from .html_report import render_report  # noqa: E402
 
 # Validated reference palette (dataviz skill): fixed categorical order, recessive chrome
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
@@ -983,3 +985,5 @@ def write_all(res, out: Path) -> None:
     write_pm_report(res, out, charts)
     write_management_summary(res, out)
     write_validation_report(res, out)
+    for name in ("risk_report", "pm_report", "management_summary", "validation_report"):
+        render_report(out / f"{name}.md")

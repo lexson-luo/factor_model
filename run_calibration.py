@@ -21,6 +21,7 @@ from factor_framework.config import DATA_DIR, MODEL, OUTPUT_DIR, SPECIFIC_RISK_E
 from factor_framework.data_loader import load_crypto_panel, load_equity_panel, load_trading
 from factor_framework.estimation import estimate_local_model
 from factor_framework.exposures import CryptoExposureBuilder, EquityExposureBuilder
+from factor_framework.html_report import render_report
 from factor_framework.reporting import SERIES, md_table, plt
 
 EVENT_FACTORS = {"US": SPECIFIC_RISK_EVENTS, "CN": SPECIFIC_RISK_EVENTS, "CRYPTO": ("token_unlock",)}
@@ -142,6 +143,7 @@ def main():
         chart(cal, pre, cur, s, charts / f"calibration_{s}.png")
     write_report(args.out / "calibration_report.md", cal, cur, head, strat, abl, lw, macro, uplift, sanity, tuned_note)
     print(f"-> {args.out / 'calibration_report.md'}")
+    print(f"-> {render_report(args.out / 'calibration_report.md')}")
 
 
 def write_report(path, cal, cur, head, strat, abl, lw, macro, uplift, sanity, tuned_note):
